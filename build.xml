@@ -2,7 +2,7 @@
     <property name="build.dir" value="dist" />
     <property name="conf.dir" value="conf" />
     <property name="lib.dir" value="lib" />
-    <property name="project.name" value="mongo"/>
+    <property name="project.name" value="MongoMonitor"/>
     <property name="machine.agent.jar" value="lib/machineagent/machineagent.jar"/>
     <property name="mongo_driver.jar" value="lib/mongo/mongo-2.10.1.jar"/>
     <property name="gson.jar" value="lib/gson/gson-2.2.2.jar"/>
@@ -17,14 +17,25 @@
     <target name="build">
         <mkdir dir="${build.dir}/classes"/>
         <javac destdir="${build.dir}/classes" srcdir="src/main/java" classpathref="cp" debug="on"/>
-        <jar destfile="${build.dir}/${project.name}.jar">
+        <mkdir dir="${build.dir}/MongoMonitor"/>
+        <mkdir dir="${build.dir}/MongoMonitor/lib"/>
+        <jar destfile="${build.dir}/MongoMonitor/${project.name}.jar">
             <fileset dir="${build.dir}/classes"/>
         </jar>
-        <copy todir="${build.dir}/lib">
-            <fileset dir="${lib.dir}" includes="gson-2.2.2.jar"/>
-            <fileset dir="${lib.dir}" includes="mongo-2.10.1.jar"/>
+        <copy todir="${build.dir}/MongoMonitor">
+            <fileset dir="${conf.dir}" includes="monitor.xml"/>
+        </copy>
+        <copy todir="${build.dir}/MongoMonitor/lib">
+            <fileset dir="${lib.dir}/gson" includes="gson-2.2.2.jar"/>
+            <fileset dir="${lib.dir}/mongo" includes="mongo-2.10.1.jar"/>
         </copy>
         <delete dir="${build.dir}/classes"/>
+    </target>
+    <target name="package" depends="build">
+        <zip destfile="${build.dir}/MongoMonitor.zip">
+            <zipfileset dir="${build.dir}/MongoMonitor" filemode="755" prefix="MongoMonitor/"/>
+        </zip>
+        <delete dir="${build.dir}/MongoMonitor"/>
     </target>
     <target name="clean">
         <delete dir="${build.dir}"/>
