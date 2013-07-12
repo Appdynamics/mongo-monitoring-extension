@@ -1,0 +1,32 @@
+<project default="build">
+    <property name="build.dir" value="dist" />
+    <property name="conf.dir" value="conf" />
+    <property name="lib.dir" value="lib" />
+    <property name="project.name" value="mongo"/>
+    <property name="machine.agent.jar" value="lib/machineagent/machineagent.jar"/>
+    <property name="mongo_driver.jar" value="lib/mongo/mongo-2.10.1.jar"/>
+    <property name="gson.jar" value="lib/gson/gson-2.2.2.jar"/>
+    <property name="log.jar" value="lib/log4j/log4j-1.2.15.jar"/>
+    <path id="cp">
+        <pathelement location="${machine.agent.jar}"/>
+        <pathelement location="${log.jar}"/>
+        <pathelement location="${mongo_driver.jar}"/>
+        <pathelement location="${gson.jar}"/>
+    </path>
+
+    <target name="build">
+        <mkdir dir="${build.dir}/classes"/>
+        <javac destdir="${build.dir}/classes" srcdir="src/main/java" classpathref="cp" debug="on"/>
+        <jar destfile="${build.dir}/${project.name}.jar">
+            <fileset dir="${build.dir}/classes"/>
+        </jar>
+        <copy todir="${build.dir}/lib">
+            <fileset dir="${lib.dir}" includes="gson-2.2.2.jar"/>
+            <fileset dir="${lib.dir}" includes="mongo-2.10.1.jar"/>
+        </copy>
+        <delete dir="${build.dir}/classes"/>
+    </target>
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+</project>
