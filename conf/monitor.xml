@@ -19,7 +19,7 @@
                         <argument name="db" is-required="true" default-value="admin" />
                 </task-arguments>
                 <java-task>
-                    <classpath>mongo.jar;lib/gson-2.2.2.jar;lib/mongo-2.10.1.jar</classpath>
+                    <classpath>MongoMonitor.jar;lib/gson-2.2.2.jar;lib/mongo-2.10.1.jar</classpath>
                         <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
                 </java-task>
         </monitor-run-task>
