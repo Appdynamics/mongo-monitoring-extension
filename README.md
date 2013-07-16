@@ -35,10 +35,6 @@ Metrics include:
 <th align = 'left'> Description </th>
 </tr>
 <tr>
-<td class='confluenceTd'> bin </td>
-<td class='confluenceTd'> Contains class files </td>
-</tr>
-<tr>
 <td class='confluenceTd'> conf </td>
 <td class='confluenceTd'> Contains the monitor.xml </td>
 </tr>
@@ -52,7 +48,7 @@ Metrics include:
 </tr>
 <tr>
 <td class='confluenceTd'> dist </td>
-<td class='confluenceTd'> Contains the distribution package (monitor.xml and jar) </td>
+<td class='confluenceTd'> Only obtained when using ant. Run 'ant build' to get binaries. Run 'ant package' to get the distributable .zip file </td>
 </tr>
 <tr>
 <td class='confluenceTd'> build.xml </td>
@@ -67,10 +63,11 @@ Metrics include:
 
 ##Installation
 
-1. In the \<machine-agent-home\>/monitors directory, create a new folder for the Mongo DB monitoring extension.
-2. Copy the contents in the 'dist' folder to the folder created in step 1.
-3. Restart the Machine Agent.
-4. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | Status.
+1. Run 'ant package' from the mongo-monitoring-extension directory
+2. Download the file MongoMonitor.zip found in the 'dist' directory into \<machineagent install dir\>/monitors/
+3. Unzip the downloaded file
+4. Restart the machineagent
+5. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | Status.
 
 ##Rebuilding the Project
 
@@ -111,30 +108,30 @@ Metrics include:
 ```
 
 <monitor>
-   <name>Mongo DBMonitor</name>
-   <type>managed</type>  
-   <description>Mongo DB server monitor</description>  
-   <monitor-configuration></monitor-configuration>
-   <monitor-run-task>
-       <execution-style>periodic</execution-style>
-       <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
-       <name>Mongo DB Monitor Run Task</name>                
-       <display-name>Mongo DB Monitor Task</display-name>
-      <description>Mongo DB Monitor Task</description>
-      <type>java</type>
-      <execution-timeout-in-secs>60</execution-timeout-in-secs>
-      <task-arguments>
-         <argument name="host" is-required="true" default-value="localhost">
-         <argument name="port" is-required="true" default-value="9000"> 
-         <argument name="username" is-required="true" default-value="admin">
-         <argument name="password" is-required="true" default-value="admin">
-         <argument name="db" is-required="true" default-value="admin">
-      </task-arguments>
-      <java-task>
-         <classpath>mongo.jar;lib/gson-2.2.2.jar;lib/mongo-2.10.1.jar</classpath>
-            <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
-      </java-task>
-   </monitor-run-task>
+        <name>Mongo DBMonitor</name>
+        <type>managed</type>
+        <description>Mongo DB server monitor</description>
+        <monitor-configuration></monitor-configuration>
+        <monitor-run-task>
+                <execution-style>periodic</execution-style>
+                <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
+                <name>Mongo DB Monitor Run Task</name>
+                <display-name>Mongo DB Monitor Task</display-name>
+                <description>Mongo DB Monitor Task</description>
+                <type>java</type>
+                <execution-timeout-in-secs>60</execution-timeout-in-secs>
+                <task-arguments>
+                        <argument name="host" is-required="true" default-value="localhost" />
+                        <argument name="port" is-required="true" default-value="9000" />
+                        <argument name="username" is-required="true" default-value="admin" />
+                        <argument name="password" is-required="true" default-value="admin" />
+                        <argument name="db" is-required="true" default-value="admin" />
+                </task-arguments>
+                <java-task>
+                    <classpath>MongoMonitor.jar;lib/gson-2.2.2.jar;lib/mongo-2.10.1.jar</classpath>
+                        <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
+                </java-task>
+        </monitor-run-task>
 </monitor>
 
 
