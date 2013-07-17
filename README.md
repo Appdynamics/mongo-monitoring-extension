@@ -18,40 +18,6 @@ Metrics include:
 * Number of database operations including: insert, query, update, delete, get more, and total number of commands
 * Number of asserts since the server process started: regular, warnings, message, user, and number of times the rollover counter has rolled
 
-##Files and Folders Included
-
-<table><tbody>
-<tr>
-<th align = 'left'> File/Folder </th>
-<th align = 'left'> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> conf </td>
-<td class='confluenceTd'> Contains the monitor.xml </td>
-</tr>
-<tr>
-<td class='confluenceTd'> lib </td>
-<td class='confluenceTd'> Contains third-party project references </td>
-</tr>
-<tr>
-<td class='confluenceTd'> src </td>
-<td class='confluenceTd'> Contains source code to Mongo DB Custom Monitor </td>
-</tr>
-<tr>
-<td class='confluenceTd'> dist </td>
-<td class='confluenceTd'> Only obtained when using ant. Run 'ant build' to get binaries. Run 'ant package' to get the distributable .zip file. </td>
-</tr>
-<tr>
-<td class='confluenceTd'> build.xml </td>
-<td class='confluenceTd'> Ant build script to package the project (required only if changing Java code) </td>
-</tr>
-</tbody>
-</table>
-
-
-
-*Main Java File*: **src/com/appdynamics/monitors/mongo/MongoDBMonitor.java**  -\> This file contains the metric parsing and printing.
-
 ##Installation
 
 1. Run 'ant package' from the mongo-monitoring-extension directory
@@ -71,8 +37,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Parameter </th>
-<th align = 'left'> Description </th>
+<th align="left"> Parameter </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Host </td>
@@ -128,6 +94,41 @@ Metrics include:
 
 ```
 
+##Directory Structure
+
+<table><tbody>
+<tr>
+<th align="left"> File/Folder </th>
+<th align="left"> Description </th>
+</tr>
+<tr>
+<td class='confluenceTd'> conf </td>
+<td class='confluenceTd'> Contains the monitor.xml </td>
+</tr>
+<tr>
+<td class='confluenceTd'> lib </td>
+<td class='confluenceTd'> Contains third-party project references </td>
+</tr>
+<tr>
+<td class='confluenceTd'> src </td>
+<td class='confluenceTd'> Contains source code to Mongo DB Custom Monitor </td>
+</tr>
+<tr>
+<td class='confluenceTd'> dist </td>
+<td class='confluenceTd'> Only obtained when using ant. Run 'ant build' to get binaries. Run 'ant package' to get the distributable .zip file. </td>
+</tr>
+<tr>
+<td class='confluenceTd'> build.xml </td>
+<td class='confluenceTd'> Ant build script to package the project (required only if changing Java code) </td>
+</tr>
+</tbody>
+</table>
+
+
+
+*Main Java File*: **src/com/appdynamics/monitors/mongo/MongoDBMonitor.java**  -\> This file contains the metric parsing and printing.
+
+
 ##Metrics
 
 ###	Server
@@ -135,8 +136,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Up Time (ms) </td>
@@ -151,8 +152,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Total Time (ms) </td>
@@ -172,8 +173,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Total </td>
@@ -196,8 +197,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Total </td>
@@ -220,8 +221,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Bits </td>
@@ -253,8 +254,8 @@ Metrics include:
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Current </td>
@@ -277,8 +278,8 @@ Consider this value in combination with the value of Current to understand the c
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Accesses </td>
@@ -304,8 +305,8 @@ Consider this value in combination with the value of Current to understand the c
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Flushes </td>
@@ -331,8 +332,8 @@ Consider this value in combination with the value of Current to understand the c
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Bytes In </td>
@@ -354,8 +355,8 @@ Consider this value in combination with the value of Current to understand the c
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Insert </td>
@@ -389,8 +390,8 @@ Consider this value in combination with the value of Current to understand the c
 
 <table><tbody>
 <tr>
-<th align = 'left'> Metric Name </th>
-<th align = 'left'> Description </th>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
 </tr>
 <tr>
 <td class='confluenceTd'> Regular </td>
@@ -416,11 +417,15 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
+
 ##Contributing
 
-Always feel free to fork and contribute any changes directly via GitHub.
+Always feel free to fork and contribute any changes directly via [GitHub](https://github.com/Appdynamics/mongo-monitoring-extension).
 
+##Community
+
+Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/Extensions/MongoDB-Monitoring-Extension/idi-p/831) community.
 
 ##Support
 
-For any support questions, please contact ace@appdynamics.com.
+For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto://ace-request@appdynamics.com).
