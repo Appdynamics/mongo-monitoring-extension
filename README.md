@@ -1,14 +1,5 @@
 # AppDynamics MongoDB Monitoring Extension
 
--   [Use Case](mongo-readme.md#use-case)
--   [Files](mongo-readme.md#files-and-folders-included)
--   [Installation](mongo-readme.md#installation)
--   [Rebuilding the Project](mongo-readme.md#rebuilding-the-project)
--   [Configuration](mongo-readme.md#configuration)
-    -   [Example Monitor XML](mongo-readme.md#example-monitor-xml)
--   [Metrics](mongo-readme.md#metrics)
-
-
 ##Use Case
 
 The MongoDB custom monitor captures statistics from the MongoDB server and displays them in the AppDynamics Metric Browser.
@@ -27,11 +18,11 @@ Metrics include:
 * Number of database operations including: insert, query, update, delete, get more, and total number of commands
 * Number of asserts since the server process started: regular, warnings, message, user, and number of times the rollover counter has rolled
 
-##Files and folders included
+##Files and Folders Included
 
 <table><tbody>
 <tr>
-<th align = 'left'> Directory/File </th>
+<th align = 'left'> File/Folder </th>
 <th align = 'left'> Description </th>
 </tr>
 <tr>
@@ -48,7 +39,7 @@ Metrics include:
 </tr>
 <tr>
 <td class='confluenceTd'> dist </td>
-<td class='confluenceTd'> Only obtained when using ant. Run 'ant build' to get binaries. Run 'ant package' to get the distributable .zip file </td>
+<td class='confluenceTd'> Only obtained when using ant. Run 'ant build' to get binaries. Run 'ant package' to get the distributable .zip file. </td>
 </tr>
 <tr>
 <td class='confluenceTd'> build.xml </td>
@@ -59,7 +50,7 @@ Metrics include:
 
 
 
-![](images/emoticons/information.gif) Main Java File: **src/com/appdynamics/monitors/mongo/MongoDBMonitor.java**  -\> This file contains the metric parsing and printing.
+*Main Java File*: **src/com/appdynamics/monitors/mongo/MongoDBMonitor.java**  -\> This file contains the metric parsing and printing.
 
 ##Installation
 
@@ -395,7 +386,6 @@ Consider this value in combination with the value of Current to understand the c
 
 
 ###Asserts
--------
 
 <table><tbody>
 <tr>
