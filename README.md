@@ -7,7 +7,7 @@ The MongoDB custom monitor captures statistics from the MongoDB server and displ
 Metrics include:
 
 * Server up time
-* globalLock time
+* Global lock time
 * Operations currently queued, number waiting for the read-lock or write-lock
 * Total active connections, number of read and write operations
 * Memory metrics including bits, resident RAM, virtual memory, mapped memory, mapped memory with journaling
