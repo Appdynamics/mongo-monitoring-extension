@@ -23,8 +23,9 @@ Metrics include:
 1. Run 'ant package' from the mongo-monitoring-extension directory
 2. Download the file MongoMonitor.zip found in the 'dist' directory into \<machineagent install dir\>/monitors/
 3. Unzip the downloaded file
-4. Restart the machineagent
-5. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | Status.
+4. In the newly created directory "MongoMonitor", edit the monitor.xml configuring the parameters specified below.
+5. Restart the machineagent
+6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | Status.
 
 ##Rebuilding the Project
 
@@ -41,20 +42,24 @@ Metrics include:
 <th align="left"> Description </th>
 </tr>
 <tr>
-<td class='confluenceTd'> Host </td>
-<td class='confluenceTd'> Mongo DB Host </td>
+<td class='confluenceTd'> host </td>
+<td class='confluenceTd'> Mongo DB host </td>
 </tr>
 <tr>
-<td class='confluenceTd'> Port </td>
-<td class='confluenceTd'> Mongo DB Port </td>
+<td class='confluenceTd'> port </td>
+<td class='confluenceTd'> Mongo DB port </td>
 </tr>
 <tr>
-<td class='confluenceTd'> Username </td>
+<td class='confluenceTd'> username </td>
 <td class='confluenceTd'> Username to access mongo db </td>
 </tr>
 <tr>
-<td class='confluenceTd'> Password </td>
+<td class='confluenceTd'> password </td>
 <td class='confluenceTd'> Password to access mongo db </td>
+</tr>
+<tr>
+<td class='confluenceTd'> db </td>
+<td class='confluenceTd'> The name of the mongo db on the host </td>
 </tr>
 </tbody>
 </table>
