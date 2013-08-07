@@ -24,6 +24,62 @@ public class MongoDBMonitor extends AManagedMonitor
 	private ServerStats serverStats;
 	private DB db;
 
+
+
+	/**
+	 * Main execution method that uploads the metrics to the AppDynamics Controller
+	 * @see com.singularity.ee.agent.systemagent.api.ITask#execute(java.util.Map, com.singularity.ee.agent.systemagent.api.TaskExecutionContext)
+	 */
+	public TaskOutput execute( Map<String, String> params, TaskExecutionContext arg1)
+			throws TaskExecutionException
+			{
+		try 
+		{
+			String host = params.get("host");
+			String port = params.get("port");
+			String username = params.get("username");
+			String password = params.get("password");
+			String db = params.get("db");
+
+			connect(host, port, username, password, db);
+			while(true){
+
+				populate();
+
+				printMetric("UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue(),
+						MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+						MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+						MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+						);
+
+				printGlobalLocksStats();
+				printMemoryStats();
+				printConnectionStats();
+				printIndexCounterStats();
+				printBackgroundFlushingStats();
+				printNetworkStats();
+				printOperationStats();
+				printAssertStats();
+
+				Thread.sleep(60000);
+			}
+		}
+		catch (NullPointerException e){
+			logger.error(e.getStackTrace());
+		}
+		catch (Exception e)
+		{
+			logger.error(e);
+			return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
+		}
+		finally {
+			if(mongoClient != null) {
+				mongoClient.close();
+			}
+		}
+		return new TaskOutput("Mongo DB Metric Upload Complete");
+	}
+	
 	/**
 	 * Connects to the Mongo DB Server
 	 * @param	host		Hostname of the Mongo DB Server				
@@ -40,11 +96,11 @@ public class MongoDBMonitor extends AManagedMonitor
 
 		this.db = mongoClient.getDB(db);
 
-		if ((username.isEmpty() && password.isEmpty()) || this.db.authenticate(username, password.toCharArray()))
+		if ((username == null && password == null) || (username.isEmpty() && password.isEmpty()) || this.db.authenticate(username, password.toCharArray()))
 		{
 			return;
 		}
-		
+
 		throw new AuthenticationException("User is not allowed to view statistics for database: " + db);
 	}
 
@@ -57,47 +113,6 @@ public class MongoDBMonitor extends AManagedMonitor
 	}
 
 	/**
-	 * Main execution method that uploads the metrics to the AppDynamics Controller
-	 * @see com.singularity.ee.agent.systemagent.api.ITask#execute(java.util.Map, com.singularity.ee.agent.systemagent.api.TaskExecutionContext)
-	 */
-	public TaskOutput execute( Map<String, String> params, TaskExecutionContext arg1)
-			throws TaskExecutionException
-	{
-		try 
-		{
-			String host = params.get("host");
-			String port = params.get("port");
-			String username = params.get("username");
-			String password = params.get("password");
-			String db = params.get("db");
-
-			connect(host, port, username, password, db);
-			populate();
-
-			printMetric("UP Time (Milliseconds)", serverStats.getUptimeMillis().longValue(),
-				MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-				MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-				MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-			);
-
-			printGlobalLocksStats();
-			printMemoryStats();
-			printConnectionStats();
-			printIndexCounterStats();
-			printBackgroundFlushingStats();
-			printNetworkStats();
-			printOperationStats();
-			printAssertStats();
-		}
-		catch (Exception e)
-		{
-			logger.error(e);
-			return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
-		}
-		return new TaskOutput("Mongo DB Metric Upload Complete");
-	}
-
-	/**
 	 * Returns the metric to the AppDynamics Controller.
 	 * @param 	metricName		Name of the Metric
 	 * @param 	metricValue		Value of the Metric
@@ -105,33 +120,42 @@ public class MongoDBMonitor extends AManagedMonitor
 	 * @param 	timeRollup		Average OR Current OR Sum
 	 * @param 	cluster			Collective OR Individual
 	 */
-	public void printMetric(String metricName, Object metricValue, String aggregation, String timeRollup, String cluster)
+	public void printMetric(String metricName, double metricValue, String aggregation, String timeRollup, String cluster)
 	{
-		MetricWriter metricWriter = getMetricWriter(getMetricPrefix() + metricName, 
-			aggregation,
-			timeRollup,
-			cluster
-		);
+		try{
+			MetricWriter metricWriter = getMetricWriter(getMetricPrefix() + metricName, 
+					aggregation,
+					timeRollup,
+					cluster
+					);
 
-		metricWriter.printMetric(String.valueOf(metricValue));
+			metricWriter.printMetric(String.valueOf((long) metricValue));
+		} catch (NullPointerException e){
+			logger.info("NullPointerException: " + e.getMessage());
+		}
 	}
-	
+
 	/**
 	 * Prints the Connection Statistics
 	 */
 	public void printConnectionStats() 
 	{
-		printMetric("Connections|Current", serverStats.getConnections().getCurrent().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Connections|Available", serverStats.getConnections().getAvailable().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Connections|Current", serverStats.getConnections().getCurrent().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Connections|Available", serverStats.getConnections().getAvailable().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+		} catch (NullPointerException e){
+			logger.info("No information on Connections available");
+		}
 	}
 
 	/**
@@ -139,35 +163,40 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printMemoryStats() 
 	{
-		printMetric("Memory|Bits", serverStats.getMem().getBits().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-	
-		printMetric("Memory|Resident", serverStats.getMem().getResident().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-	
-		printMetric("Memory|Virtual", serverStats.getMem().getVirtual().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Memory|Mapped", serverStats.getMem().getMapped().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Memory|Bits", serverStats.getMem().getBits().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Memory|Resident", serverStats.getMem().getResident().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Memory|Virtual", serverStats.getMem().getVirtual().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Memory|Mapped", serverStats.getMem().getMapped().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+		} catch (NullPointerException e){
+			logger.info("No information on Memory available");
+		}
 	}
 
 	/**
@@ -175,47 +204,52 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printGlobalLocksStats() 
 	{
-		printMetric("Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Global Lock|Current Queue|Readers", serverStats.getGlobalLock().getCurrentQueue().getReaders().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Global Lock|Current Queue|Readers", serverStats.getGlobalLock().getCurrentQueue().getReaders().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Global Lock|Current Queue|Writers", serverStats.getGlobalLock().getCurrentQueue().getWriters().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Global Lock|Current Queue|Writers", serverStats.getGlobalLock().getCurrentQueue().getWriters().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Global Lock|Active Clients|Total", serverStats.getGlobalLock().getActiveClients().getTotal().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Global Lock|Active Clients|Total", serverStats.getGlobalLock().getActiveClients().getTotal().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Global Lock|Active Clients|Readers", serverStats.getGlobalLock().getActiveClients().getReaders().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Global Lock|Active Clients|Readers", serverStats.getGlobalLock().getActiveClients().getReaders().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+		} catch (NullPointerException e){
+			logger.info("No information on Global Lock available");
+		}
 	}
 
 	/**
@@ -223,35 +257,34 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printIndexCounterStats() 
 	{
-		printMetric("Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getBtree().getAccesses().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getBtree().getHits().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getBtree().getAccesses().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getBtree().getMisses().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getBtree().getResets().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getBtree().getHits().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getBtree().getMisses().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getBtree().getResets().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+		} catch (NullPointerException e){
+			logger.info("No information on Index Counter available");
+		}
 	}
 
 	/**
@@ -259,29 +292,33 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printBackgroundFlushingStats()
 	{
-		printMetric("Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+		} catch (NullPointerException e){
+			logger.info("No information on Background Flushing available");
+		} 
 	}
 
 	/**
@@ -289,23 +326,27 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printNetworkStats() 
 	{
-		printMetric("Network|Bytes In", serverStats.getNetwork().getBytesIn().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Network|Bytes In", serverStats.getNetwork().getBytesIn().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Network|Bytes Out", serverStats.getNetwork().getBytesOut().longValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Network|Bytes Out", serverStats.getNetwork().getBytesOut().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Network|Number Requests", serverStats.getNetwork().getBytesIn().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Network|Number Requests", serverStats.getNetwork().getBytesIn().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+		} catch (NullPointerException e){
+			logger.info("No information on Network available");
+		}
 	}
 
 	/**
@@ -313,41 +354,45 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printOperationStats()
 	{
-		printMetric("Operations|Insert", serverStats.getOpcounters().getInsert().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Operations|Insert", serverStats.getOpcounters().getInsert().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Operations|Query", serverStats.getOpcounters().getQuery().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Operations|Update", serverStats.getOpcounters().getUpdate().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Operations|Delete", serverStats.getOpcounters().getDelete().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Operations|Get More", serverStats.getOpcounters().getGetmore().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Operations|Command", serverStats.getOpcounters().getCommand().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Operations|Query", serverStats.getOpcounters().getQuery().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Operations|Update", serverStats.getOpcounters().getUpdate().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Operations|Delete", serverStats.getOpcounters().getDelete().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Operations|Get More", serverStats.getOpcounters().getGetmore().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Operations|Command", serverStats.getOpcounters().getCommand().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+		} catch (NullPointerException e){
+			logger.info("No information on Operations available");
+		}
 	}
 
 	/**
@@ -355,35 +400,39 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void printAssertStats()
 	{
-		printMetric("Asserts|Regular", serverStats.getAsserts().getRegular().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+		try{
+			printMetric("Asserts|Regular", serverStats.getAsserts().getRegular().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
 
-		printMetric("Asserts|Warning", serverStats.getAsserts().getWarning().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Asserts|Message", serverStats.getAsserts().getMsg().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Asserts|User", serverStats.getAsserts().getWarning().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
-		
-		printMetric("Asserts|Rollover", serverStats.getAsserts().getRollovers().intValue(),
-			MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-			MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-			MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-		);
+			printMetric("Asserts|Warning", serverStats.getAsserts().getWarning().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Asserts|Message", serverStats.getAsserts().getMsg().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Asserts|User", serverStats.getAsserts().getWarning().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+
+			printMetric("Asserts|Rollover", serverStats.getAsserts().getRollovers().doubleValue(),
+					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+					);
+		} catch (NullPointerException e){
+			logger.info("No information on Asserts available");
+		}
 	}
 
 	/**
