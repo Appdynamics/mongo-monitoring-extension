@@ -16,7 +16,7 @@
 
     <target name="build">
         <mkdir dir="${build.dir}/classes"/>
-        <javac destdir="${build.dir}/classes" srcdir="src/main/java" classpathref="cp" debug="on"/>
+        <javac destdir="${build.dir}/classes" source="1.5" target="1.5" srcdir="src/main/java" classpathref="cp" debug="on"/>
         <mkdir dir="${build.dir}/MongoMonitor"/>
         <mkdir dir="${build.dir}/MongoMonitor/lib"/>
         <jar destfile="${build.dir}/MongoMonitor/${project.name}.jar">
