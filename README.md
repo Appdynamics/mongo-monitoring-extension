@@ -64,6 +64,7 @@ Metrics include:
 </tbody>
 </table>
 
+#####Note: Ensure that the user has appropriate permissions to the database! Otherwise, metrics will not be displayed in the AppDynamics Metric Browser.
 
 ###Example Monitor XML
 
