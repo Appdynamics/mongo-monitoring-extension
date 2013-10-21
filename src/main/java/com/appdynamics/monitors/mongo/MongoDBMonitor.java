@@ -19,12 +19,12 @@ import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException
 
 public class MongoDBMonitor extends AManagedMonitor
 {
-	Logger logger = Logger.getLogger(this.getClass().getName());
+	private static final Number OK_RESPONSE = 1.0;
+    Logger logger = Logger.getLogger(this.getClass().getName());
 	private MongoClient mongoClient;
 	private ServerStats serverStats;
+
 	private DB db;
-
-
 
 	/**
 	 * Main execution method that uploads the metrics to the AppDynamics Controller
@@ -65,11 +65,11 @@ public class MongoDBMonitor extends AManagedMonitor
 			}
 		}
 		catch (NullPointerException e){
-			logger.error(e.getStackTrace());
+			logger.error("NullPointerException", e);
 		}
 		catch (Exception e)
 		{
-			logger.error(e);
+			logger.error("Exception", e);
 			return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
 		}
 		finally {
@@ -107,9 +107,13 @@ public class MongoDBMonitor extends AManagedMonitor
 	/**
 	 * Populates the data from Mongo DB Server
 	 */
-	public void populate() 
+	public void populate()
 	{
-		serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
+        serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
+        if (serverStats != null && !serverStats.getOk().equals(OK_RESPONSE)) {
+            logger.error("Server status: " + db.command("serverStatus"));
+            logger.error("Error retrieving server status. Invalid permissions set for this user.");
+        }
 	}
 
 	/**

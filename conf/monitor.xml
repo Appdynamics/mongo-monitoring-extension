@@ -18,9 +18,9 @@
                 <task-arguments>
                         <argument name="host" is-required="true" default-value="localhost" />
                         <argument name="port" is-required="true" default-value="27017" />
-                        <argument name="username" is-required="true" default-value="admin" />
+                        <argument name="username" is-required="true" default-value="admin2" />
                         <argument name="password" is-required="true" default-value="admin" />
-                        <argument name="db" is-required="true" default-value="admin" />
+                        <argument name="db" is-required="true" default-value="myDB" />
                 </task-arguments>
                 <java-task>
                     <classpath>MongoMonitor.jar;lib/gson-2.2.2.jar;lib/mongo-2.10.1.jar</classpath>
