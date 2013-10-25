@@ -96,7 +96,7 @@ public class MongoDBMonitor extends AManagedMonitor
 
 		this.db = mongoClient.getDB(db);
 
-		if ((username == null && password == null) || (username.isEmpty() && password.isEmpty()) || this.db.authenticate(username, password.toCharArray()))
+		if ((username == null && password == null) || ("".equals(username) && "".equals(password)) || this.db.authenticate(username, password.toCharArray()))
 		{
 			return;
 		}
