@@ -4,7 +4,7 @@
 
 The MongoDB custom monitor captures statistics from the MongoDB server and displays them in the AppDynamics Metric Browser.
 
-This Extension works only with the Java agent.
+This extension works only with the standalone machine agent.
 
 Metrics include:
 
