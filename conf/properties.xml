@@ -1,0 +1,20 @@
+<!--
+    DB credentials are to be placed in separate <credentials> elements.
+    all arguments are required.
+
+    Example:
+
+    <credentials>
+        <username>user</username>
+        <password>guest</password>
+        <db>mydb</db>
+    </credentials>
+-->
+
+<mongo-monitor>
+    <credentials>
+        <username></username>
+        <password></password>
+        <db></db>
+    </credentials>
+</mongo-monitor>
