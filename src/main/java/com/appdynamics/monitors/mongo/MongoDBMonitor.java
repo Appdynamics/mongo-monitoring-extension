@@ -58,20 +58,10 @@ public class MongoDBMonitor extends AManagedMonitor
             connect();
 
             while(true){
-                ExecutorService executor = Executors.newFixedThreadPool(credentials.size());
-
-                CompletionService<DBStats> threadPool =
-                        new ExecutorCompletionService<DBStats>(executor);
-
-                for (DB db : dbs) {
-                    threadPool.submit(new DBStats(db));
-                }
-
-                for (int i=0;i<dbs.size();i++){
+                for (DB db : dbs){
                     try {
-                        DBStats stats = threadPool.take().get();
-                        serverStats = stats.getServerStats();
-                        dbname = stats.getDBName();
+                        serverStats = getServerStats(db);
+                        dbname = db.getName();
 
                         printMetric("UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue(),
                                 MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
@@ -92,7 +82,6 @@ public class MongoDBMonitor extends AManagedMonitor
                     }
                 }
 
-                executor.shutdown();
                 Thread.sleep(60000);
             }
 		}
@@ -134,11 +123,13 @@ public class MongoDBMonitor extends AManagedMonitor
                 Element root = doc.getRootElement();
 
                 for (Element credElem : (List<Element>) root.elements("credentials")) {
-                    cred = MongoCredential.createMongoCRCredential(
-                            credElem.elementText(ARG_USER),
-                            credElem.elementText(ARG_DB),
-                            credElem.elementText(ARG_PASS).toCharArray());
-                    credentials.add(cred);
+                    if (credElem.elementText(ARG_DB).length() > 0) {
+                        cred = MongoCredential.createMongoCRCredential(
+                                credElem.elementText(ARG_USER),
+                                credElem.elementText(ARG_DB),
+                                credElem.elementText(ARG_PASS).toCharArray());
+                        credentials.add(cred);
+                    }
                 }
             } catch (DocumentException e) {
                 logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials");
@@ -153,10 +144,13 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public void connect() throws UnknownHostException, AuthenticationException
 	{
-        mongoClient = new MongoClient(new ServerAddress(host, Integer.parseInt(port)), credentials);
+        mongoClient = new MongoClient(host, Integer.parseInt(port));
         for (MongoCredential cred : credentials){
             DB db = mongoClient.getDB(cred.getSource());
-            if (db.authenticate(cred.getUserName(),cred.getPassword())){
+            if ((cred.getUserName() == null && cred.getPassword() == null)
+                    || (cred.getUserName().equals("") && cred.getPassword().length == 0)
+                    || db.isAuthenticated()
+                    || db.authenticate(cred.getUserName(),cred.getPassword())){
                 dbs.add(db);
             } else {
                 logger.error("User is not allowed to view statistics for database: " + db.getName());
@@ -497,33 +491,15 @@ public class MongoDBMonitor extends AManagedMonitor
 	}
 
     private static boolean isNotEmpty(final String input) {
-        return input != null && !input.trim().isEmpty();
+        return input != null && input.trim().length() > 0;
     }
 
-    private class DBStats implements Callable<DBStats>{
-        private DB db;
-        private ServerStats serverStats;
-
-        public DBStats(DB db) {
-            this.db = db;
+    private ServerStats getServerStats(DB db){
+        ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
+        if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
+            logger.error("Server status: " + db.command("serverStatus"));
+            logger.error("Error retrieving server status. Invalid permissions set for this user.");
         }
-
-        @Override
-        public DBStats call() throws Exception {
-            serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
-            if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
-                logger.error("Server status: " + db.command("serverStatus"));
-                logger.error("Error retrieving server status. Invalid permissions set for this user.");
-            }
-            return this;
-        }
-
-        public String getDBName(){
-            return db.getName();
-        }
-
-        public ServerStats getServerStats() {
-            return serverStats;
-        }
+        return serverStats;
     }
 }
