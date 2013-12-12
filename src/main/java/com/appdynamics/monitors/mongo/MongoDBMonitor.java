@@ -1,10 +1,15 @@
 package com.appdynamics.monitors.mongo;
 
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 
 import javax.naming.AuthenticationException;
 
+import com.mongodb.MongoCredential;
+import com.mongodb.ServerAddress;
 import org.apache.log4j.Logger;
 
 import com.appdynamics.monitors.mongo.json.ServerStats;
@@ -16,15 +21,29 @@ import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
 import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
 
 public class MongoDBMonitor extends AManagedMonitor
 {
-	private static final Number OK_RESPONSE = 1.0;
-    Logger logger = Logger.getLogger(this.getClass().getName());
-	private MongoClient mongoClient;
-	private ServerStats serverStats;
+    private static final String ARG_HOST = "host";
+    private static final String ARG_PORT = "port";
+    private static final String ARG_USER = "username";
+    private static final String ARG_PASS = "password";
+    private static final String ARG_DB = "db";
+    private static final String ARG_XML_PATH = "properties-path";
 
-	private DB db;
+    private static final String OK_RESPONSE = "1.0";
+    Logger logger = Logger.getLogger(this.getClass().getName());
+    private MongoClient mongoClient;
+	private ServerStats serverStats;
+    private String dbname;
+    private List<MongoCredential> credentials;
+    private List<DB> dbs = new ArrayList<DB>();
+    private String host;
+    private String port;
 
 	/**
 	 * Main execution method that uploads the metrics to the AppDynamics Controller
@@ -33,36 +52,38 @@ public class MongoDBMonitor extends AManagedMonitor
 	public TaskOutput execute( Map<String, String> params, TaskExecutionContext arg1)
 			throws TaskExecutionException
 			{
-		try 
+		try
 		{
-			String host = params.get("host");
-			String port = params.get("port");
-			String username = params.get("username");
-			String password = params.get("password");
-			String db = params.get("db");
+            getCredentials(params);
+            connect();
 
-			connect(host, port, username, password, db);
-			while(true){
+            while(true){
+                for (DB db : dbs){
+                    try {
+                        serverStats = getServerStats(db);
+                        dbname = db.getName();
 
-				populate();
+                        printMetric("UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue(),
+                                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                                MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+                                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+                        );
 
-				printMetric("UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue(),
-						MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-						MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-						MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-						);
+                        printGlobalLocksStats();
+                        printMemoryStats();
+                        printConnectionStats();
+                        printIndexCounterStats();
+                        printBackgroundFlushingStats();
+                        printNetworkStats();
+                        printOperationStats();
+                        printAssertStats();
+                    } catch (Exception e) {
+                        logger.error("Failed to get metrics", e);
+                    }
+                }
 
-				printGlobalLocksStats();
-				printMemoryStats();
-				printConnectionStats();
-				printIndexCounterStats();
-				printBackgroundFlushingStats();
-				printNetworkStats();
-				printOperationStats();
-				printAssertStats();
-
-				Thread.sleep(60000);
-			}
+                Thread.sleep(60000);
+            }
 		}
 		catch (NullPointerException e){
 			logger.error("NullPointerException", e);
@@ -79,40 +100,61 @@ public class MongoDBMonitor extends AManagedMonitor
 		}
 		return new TaskOutput("Mongo DB Metric Upload Complete");
 	}
-	
+
+    private void getCredentials(final Map<String, String> args){
+        credentials = new ArrayList<MongoCredential>();
+        MongoCredential cred;
+
+        host = args.get(ARG_HOST);
+        port = args.get(ARG_PORT);
+
+        cred = MongoCredential.createMongoCRCredential(
+                args.get(ARG_USER),
+                args.get(ARG_DB),
+                args.get(ARG_PASS).toCharArray());
+
+        credentials.add(cred);
+
+        String xmlPath = args.get(ARG_XML_PATH);
+        if (isNotEmpty(xmlPath)) {
+            try {
+                SAXReader reader = new SAXReader();
+                Document doc = reader.read(xmlPath);
+                Element root = doc.getRootElement();
+
+                for (Element credElem : (List<Element>) root.elements("credentials")) {
+                    if (credElem.elementText(ARG_DB).length() > 0) {
+                        cred = MongoCredential.createMongoCRCredential(
+                                credElem.elementText(ARG_USER),
+                                credElem.elementText(ARG_DB),
+                                credElem.elementText(ARG_PASS).toCharArray());
+                        credentials.add(cred);
+                    }
+                }
+            } catch (DocumentException e) {
+                logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials");
+            }
+        }
+    }
+
 	/**
 	 * Connects to the Mongo DB Server
-	 * @param	host		Hostname of the Mongo DB Server				
-	 * @param 	port		Port of the Mongo DB Server
 	 * @throws 				UnknownHostException
 	 * @throws 				AuthenticationException
 	 */
-	public void connect( String host, String port, String username, String password, String db) throws UnknownHostException, AuthenticationException
+	public void connect() throws UnknownHostException, AuthenticationException
 	{
-		if (mongoClient == null)
-		{
-			mongoClient = new MongoClient(host, Integer.parseInt(port));
-		}
-
-		this.db = mongoClient.getDB(db);
-
-		if ((username == null && password == null) || ("".equals(username) && "".equals(password)) || this.db.authenticate(username, password.toCharArray()))
-		{
-			return;
-		}
-
-		throw new AuthenticationException("User is not allowed to view statistics for database: " + db);
-	}
-
-	/**
-	 * Populates the data from Mongo DB Server
-	 */
-	public void populate()
-	{
-        serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
-        if (serverStats != null && !serverStats.getOk().equals(OK_RESPONSE)) {
-            logger.error("Server status: " + db.command("serverStatus"));
-            logger.error("Error retrieving server status. Invalid permissions set for this user.");
+        mongoClient = new MongoClient(host, Integer.parseInt(port));
+        for (MongoCredential cred : credentials){
+            DB db = mongoClient.getDB(cred.getSource());
+            if ((cred.getUserName() == null && cred.getPassword() == null)
+                    || (cred.getUserName().equals("") && cred.getPassword().length == 0)
+                    || db.isAuthenticated()
+                    || db.authenticate(cred.getUserName(),cred.getPassword())){
+                dbs.add(db);
+            } else {
+                logger.error("User is not allowed to view statistics for database: " + db.getName());
+            }
         }
 	}
 
@@ -127,7 +169,7 @@ public class MongoDBMonitor extends AManagedMonitor
 	public void printMetric(String metricName, double metricValue, String aggregation, String timeRollup, String cluster)
 	{
 		try{
-			MetricWriter metricWriter = getMetricWriter(getMetricPrefix() + metricName, 
+			MetricWriter metricWriter = getMetricWriter(getMetricPrefix() + metricName,
 					aggregation,
 					timeRollup,
 					cluster
@@ -142,7 +184,7 @@ public class MongoDBMonitor extends AManagedMonitor
 	/**
 	 * Prints the Connection Statistics
 	 */
-	public void printConnectionStats() 
+	public void printConnectionStats()
 	{
 		try{
 			printMetric("Connections|Current", serverStats.getConnections().getCurrent().doubleValue(),
@@ -165,7 +207,7 @@ public class MongoDBMonitor extends AManagedMonitor
 	/**
 	 * Prints the Memory Statistics
 	 */
-	public void printMemoryStats() 
+	public void printMemoryStats()
 	{
 		try{
 			printMetric("Memory|Bits", serverStats.getMem().getBits().doubleValue(),
@@ -206,7 +248,7 @@ public class MongoDBMonitor extends AManagedMonitor
 	/**
 	 * Prints the Global Lock Statistics
 	 */
-	public void printGlobalLocksStats() 
+	public void printGlobalLocksStats()
 	{
 		try{
 			printMetric("Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime().doubleValue(),
@@ -259,7 +301,7 @@ public class MongoDBMonitor extends AManagedMonitor
 	/**
 	 * Prints the Index Counter Statistics
 	 */
-	public void printIndexCounterStats() 
+	public void printIndexCounterStats()
 	{
 		try{
 			printMetric("Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getBtree().getAccesses().doubleValue(),
@@ -322,13 +364,13 @@ public class MongoDBMonitor extends AManagedMonitor
 					);
 		} catch (NullPointerException e){
 			logger.info("No information on Background Flushing available");
-		} 
+		}
 	}
 
 	/**
 	 * Prints the Network Statistics
 	 */
-	public void printNetworkStats() 
+	public void printNetworkStats()
 	{
 		try{
 			printMetric("Network|Bytes In", serverStats.getNetwork().getBytesIn().doubleValue(),
@@ -445,6 +487,19 @@ public class MongoDBMonitor extends AManagedMonitor
 	 */
 	public String getMetricPrefix()
 	{
-		return "Custom Metrics|Mongo Server|Status|";
+        return "Custom Metrics|Mongo Server|"  + dbname + "|";
 	}
+
+    private static boolean isNotEmpty(final String input) {
+        return input != null && input.trim().length() > 0;
+    }
+
+    private ServerStats getServerStats(DB db){
+        ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
+        if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
+            logger.error("Server status: " + db.command("serverStatus"));
+            logger.error("Error retrieving server status. Invalid permissions set for this user.");
+        }
+        return serverStats;
+    }
 }

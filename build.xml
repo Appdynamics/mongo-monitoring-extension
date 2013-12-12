@@ -4,14 +4,16 @@
     <property name="lib.dir" value="lib" />
     <property name="project.name" value="MongoMonitor"/>
     <property name="machine.agent.jar" value="lib/machineagent/machineagent.jar"/>
-    <property name="mongo_driver.jar" value="lib/mongo/mongo-2.10.1.jar"/>
+    <property name="mongo_driver.jar" value="lib/mongo/mongo-java-driver-2.11.3.jar"/>
     <property name="gson.jar" value="lib/gson/gson-2.2.2.jar"/>
     <property name="log.jar" value="lib/log4j/log4j-1.2.15.jar"/>
+    <property name="xml.jar" value="lib/dom4j/dom4j-1.6.1.jar"/>
     <path id="cp">
         <pathelement location="${machine.agent.jar}"/>
         <pathelement location="${log.jar}"/>
         <pathelement location="${mongo_driver.jar}"/>
         <pathelement location="${gson.jar}"/>
+        <pathelement location="${xml.jar}"/>
     </path>
 
     <target name="build">
@@ -23,11 +25,12 @@
             <fileset dir="${build.dir}/classes"/>
         </jar>
         <copy todir="${build.dir}/MongoMonitor">
-            <fileset dir="${conf.dir}" includes="monitor.xml"/>
+            <fileset dir="${conf.dir}" includes="*"/>
         </copy>
         <copy todir="${build.dir}/MongoMonitor/lib">
             <fileset dir="${lib.dir}/gson" includes="gson-2.2.2.jar"/>
-            <fileset dir="${lib.dir}/mongo" includes="mongo-2.10.1.jar"/>
+            <fileset dir="${lib.dir}/mongo" includes="mongo-java-driver-2.11.3.jar"/>
+            <fileset dir="${lib.dir}/dom4j" includes="dom4j-1.6.1.jar"/>
         </copy>
         <delete dir="${build.dir}/classes"/>
     </target>

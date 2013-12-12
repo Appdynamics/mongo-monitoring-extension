@@ -26,8 +26,9 @@ Metrics include:
 2. Download the file MongoMonitor.zip found in the 'dist' directory into \<machineagent install dir\>/monitors/
 3. Unzip the downloaded file
 4. In the newly created directory "MongoMonitor", edit the monitor.xml configuring the parameters specified below.
+5. If there are additional DB to be monitored, add the credentials to properties.xml
 5. Restart the machineagent
-6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | Status.
+6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | \<DB\>.
 
 ##Rebuilding the Project
 
@@ -78,22 +79,31 @@ Metrics include:
         <description>Mongo DB server monitor</description>
         <monitor-configuration></monitor-configuration>
         <monitor-run-task>
-                <execution-style>periodic</execution-style>
+                <execution-style>continuous</execution-style>
+                <!--
                 <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
+                -->
                 <name>Mongo DB Monitor Run Task</name>
                 <display-name>Mongo DB Monitor Task</display-name>
                 <description>Mongo DB Monitor Task</description>
                 <type>java</type>
+                <!--
                 <execution-timeout-in-secs>60</execution-timeout-in-secs>
+                -->
                 <task-arguments>
                         <argument name="host" is-required="true" default-value="localhost" />
-                        <argument name="port" is-required="true" default-value="9000" />
+                        <argument name="port" is-required="true" default-value="27017" />
                         <argument name="username" is-required="true" default-value="admin" />
                         <argument name="password" is-required="true" default-value="admin" />
                         <argument name="db" is-required="true" default-value="admin" />
+
+                        <!-- Additional MongoDB credentials (OPTIONAL)
+                                Additional MongoDB credentials can be placed in properties.xml
+                        -->
+                        <argument name="properties-path" is-required="false" default-value="monitors/MongoMonitor/properties.xml" />
                 </task-arguments>
                 <java-task>
-                    <classpath>MongoMonitor.jar;lib/gson-2.2.2.jar;lib/mongo-2.10.1.jar</classpath>
+                    <classpath>MongoMonitor.jar;lib/gson-2.2.2.jar;lib/mongo-java-driver-2.11.3.jar;lib/dom4j-1.6.1.jar</classpath>
                         <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
                 </java-task>
         </monitor-run-task>
@@ -111,7 +121,7 @@ Metrics include:
 </tr>
 <tr>
 <td class='confluenceTd'> conf </td>
-<td class='confluenceTd'> Contains the monitor.xml </td>
+<td class='confluenceTd'> Contains the monitor.xml and properties.xml </td>
 </tr>
 <tr>
 <td class='confluenceTd'> lib </td>
