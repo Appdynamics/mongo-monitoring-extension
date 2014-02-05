@@ -30,7 +30,7 @@ Metrics include:
 4. In the newly created directory "MongoMonitor", edit the monitor.xml configuring the parameters specified below.
 5. If there are additional DB to be monitored, add the credentials to properties.xml
 5. Restart the machineagent
-6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server | \<DB\>.
+6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
 
 ##Rebuilding the Project
 
