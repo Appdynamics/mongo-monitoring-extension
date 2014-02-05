@@ -5,6 +5,7 @@
     Example:
 
     <credentials>
+        User should have read permissions on the given db
         <username>user</username>
         <password>guest</password>
         <db>mydb</db>
@@ -12,9 +13,5 @@
 -->
 
 <mongo-monitor>
-    <credentials>
-        <username></username>
-        <password></password>
-        <db></db>
-    </credentials>
+
 </mongo-monitor>

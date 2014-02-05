@@ -19,6 +19,8 @@ Metrics include:
 * Network traffic sent and received (in bytes), number of distinct requests received
 * Number of database operations including: insert, query, update, delete, get more, and total number of commands
 * Number of asserts since the server process started: regular, warnings, message, user, and number of times the rollover counter has rolled
+* Database related stats
+* Cluster related stats
 
 ##Installation
 
@@ -54,15 +56,11 @@ Metrics include:
 </tr>
 <tr>
 <td class='confluenceTd'> username </td>
-<td class='confluenceTd'> Username to access mongo db </td>
+<td class='confluenceTd'> Username with cluster admin role to access mongo db server status </td>
 </tr>
 <tr>
 <td class='confluenceTd'> password </td>
 <td class='confluenceTd'> Password to access mongo db </td>
-</tr>
-<tr>
-<td class='confluenceTd'> db </td>
-<td class='confluenceTd'> The name of the mongo db on the host </td>
 </tr>
 </tbody>
 </table>
@@ -79,23 +77,18 @@ Metrics include:
         <description>Mongo DB server monitor</description>
         <monitor-configuration></monitor-configuration>
         <monitor-run-task>
-                <execution-style>continuous</execution-style>
-                <!--
+                <execution-style>periodic</execution-style>
                 <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
-                -->
                 <name>Mongo DB Monitor Run Task</name>
                 <display-name>Mongo DB Monitor Task</display-name>
                 <description>Mongo DB Monitor Task</description>
                 <type>java</type>
-                <!--
                 <execution-timeout-in-secs>60</execution-timeout-in-secs>
-                -->
                 <task-arguments>
                         <argument name="host" is-required="true" default-value="localhost" />
                         <argument name="port" is-required="true" default-value="27017" />
                         <argument name="username" is-required="true" default-value="admin" />
                         <argument name="password" is-required="true" default-value="admin" />
-                        <argument name="db" is-required="true" default-value="admin" />
 
                         <!-- Additional MongoDB credentials (OPTIONAL)
                                 Additional MongoDB credentials can be placed in properties.xml
@@ -149,8 +142,7 @@ Metrics include:
 
 ##Metrics
 
-###	Server
-
+###	Server Stats
 
 <table><tbody>
 <tr>
@@ -164,9 +156,7 @@ Metrics include:
 </tbody>
 </table>
 
-
-###Locks
-
+####Metric Category: Asserts
 
 <table><tbody>
 <tr>
@@ -174,20 +164,113 @@ Metrics include:
 <th align="left"> Description </th>
 </tr>
 <tr>
-<td class='confluenceTd'> Total Time (ms) </td>
-<td class='confluenceTd'> The total time since the globalLock was started and created </td>
+<td class='confluenceTd'> Message </td>
+<td class='confluenceTd'>  </td>
 </tr>
 <tr>
-<td class='confluenceTd'> Lock Time (ms) </td>
-<td class='confluenceTd'> The time since the database last started globalLock and has been held </td>
+<td class='confluenceTd'> Regular </td>
+<td class='confluenceTd'>  </td>
+</tr>
+<tr>
+<td class='confluenceTd'> Rollover </td>
+<td class='confluenceTd'>  </td>
+</tr>
+<tr>
+<td class='confluenceTd'> User </td>
+<td class='confluenceTd'>  </td>
+</tr>
+<tr>
+<td class='confluenceTd'> Warning </td>
+<td class='confluenceTd'>  </td>
+</tr>
+</tbody>
+</table>
+
+####Metric Category: Background Flushing 
+
+<table><tbody>
+<tr>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
+</tr>
+<tr>
+<td class='confluenceTd'> Flushes </td>
+<td class='confluenceTd'> Number of times the database has been flushed </td>
+</tr>
+<tr>
+<td class='confluenceTd'> Total (ms) </td>
+<td class='confluenceTd'> Total time (ms) that the mongod process spent writing data to disk </td>
+</tr>
+<tr>
+<td class='confluenceTd'> Average (ms) </td>
+<td class='confluenceTd'> Average time (ms) that the mongod process spent writing data to disk </td>
+</tr>
+<tr>
+<td class='confluenceTd'> Last (ms) </td>
+<td class='confluenceTd'> Time (ms) that the mongod process last spent writing data to disk </td>
+</tr>
+</tbody>
+</table>
+
+####Metric Category: Connections
+
+<table><tbody>
+<tr>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
+</tr>
+<tr>
+<td class='confluenceTd'> Current </td>
+<td class='confluenceTd'> Number of current connections to the database server from clients.
+This number includes the current shell connection as well as any inter-node connections to support
+a replica set or sharded cluster.</td>
+</tr>
+<tr>
+<td class='confluenceTd'> Available </td>
+<td class='confluenceTd'> Number of unused available connections that the database can provide.
+Consider this value in combination with the value of Current to understand the connection load on the database.</td>
 </tr>
 </tbody>
 </table>
 
 
+####Metric Category: Global Lock
+ 
+ <table>
+ <tbody>
+ <tr>
+ <th align="left"> Metric Name </th>
+ <th align="left"> Description </th>
+ </tr>
+ <tr>
+  <th align="left"> Total Time </th>
+  <th align="left"> The total time since the globalLock was started and created </th>
+  </tr>
+ </tbody>
+ </table>
+ 
+#####Active Clients
+ <table><tbody>
+ <tr>
+ <th align="left"> Metric Name </th>
+ <th align="left"> Description </th>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Total </td>
+ <td class='confluenceTd'> Number of active client connections to the database </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Readers </td>
+ <td class='confluenceTd'> Number of readers performing read operations </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Writers </td>
+ <td class='confluenceTd'> Number of writers performing write operations </td>
+ </tr>
+ </tbody>
+ </table>
 
-#### Current Queue
-
+#####Current Queue
 
 <table><tbody>
 <tr>
@@ -209,33 +292,7 @@ Metrics include:
 </tbody>
 </table>
 
-
-#### Active Clients
-
-
-<table><tbody>
-<tr>
-<th align="left"> Metric Name </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> Total </td>
-<td class='confluenceTd'> Number of active client connections to the database </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Readers </td>
-<td class='confluenceTd'> Number of readers performing read operations </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Writers </td>
-<td class='confluenceTd'> Number of writers performing write operations </td>
-</tr>
-</tbody>
-</table>
-
-
-###Memory
-
+####Metric Category: Memory
 
 <table><tbody>
 <tr>
@@ -266,88 +323,7 @@ Metrics include:
 </table>
 
 
-
-###Connections
-
-
-<table><tbody>
-<tr>
-<th align="left"> Metric Name </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> Current </td>
-<td class='confluenceTd'> Number of current connections to the database server from clients.
-This number includes the current shell connection as well as any inter-node connections to support
-a replica set or sharded cluster.</td>
-</tr>
-<tr>
-<td class='confluenceTd'> Available </td>
-<td class='confluenceTd'> Number of unused available connections that the database can provide.
-Consider this value in combination with the value of Current to understand the connection load on the database.</td>
-</tr>
-</tbody>
-</table>
-
-
-
-
-###Index Counters
-
-<table><tbody>
-<tr>
-<th align="left"> Metric Name </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> Accesses </td>
-<td class='confluenceTd'> Number of times that operations have accessed indexes (Includes hits and misses) </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Hits </td>
-<td class='confluenceTd'> Number of times an index has been accessed and index was found in memory </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Misses </td>
-<td class='confluenceTd'> Number of times an index has been accessed and index was available in memory </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Resets </td>
-<td class='confluenceTd'> Number of times that the index counter has been reset since the database last started </td>
-</tr>
-</tbody>
-</table>
-
-
-###Background Flushing
-
-<table><tbody>
-<tr>
-<th align="left"> Metric Name </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> Flushes </td>
-<td class='confluenceTd'> Number of times the database has been flushed </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Total (ms) </td>
-<td class='confluenceTd'> Total time (ms) that the mongod process spent writing data to disk </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Average (ms) </td>
-<td class='confluenceTd'> Average time (ms) that the mongod process spent writing data to disk </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Last (ms) </td>
-<td class='confluenceTd'> Time (ms) that the mongod process last spent writing data to disk </td>
-</tr>
-</tbody>
-</table>
-
-
-###Network
-
+####Metric Category: Network
 <table><tbody>
 <tr>
 <th align="left"> Metric Name </th>
@@ -368,72 +344,141 @@ Consider this value in combination with the value of Current to understand the c
 </tbody>
 </table>
 
+####Metric Category: Operations
+ <table><tbody>
+ <tr>
+ <th align="left"> Metric Name </th>
+ <th align="left"> Description </th>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Insert </td>
+ <td class='confluenceTd'> Number of insert operations </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Query </td>
+ <td class='confluenceTd'> Number of query operations </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Update </td>
+ <td class='confluenceTd'> Number of update operations </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Delete </td>
+ <td class='confluenceTd'> Number of delete operations </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> GetMore </td>
+ <td class='confluenceTd'> Number of getmore operations </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> Command </td>
+ <td class='confluenceTd'> Total number of commands issued to database </td>
+ </tr>
+ </tbody>
+ </table>
 
-###Operations
+###	DB Stats
 
+####<DB Name>
 <table><tbody>
-<tr>
-<th align="left"> Metric Name </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> Insert </td>
-<td class='confluenceTd'> Number of insert operations </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Query </td>
-<td class='confluenceTd'> Number of query operations </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Update </td>
-<td class='confluenceTd'> Number of update operations </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Delete </td>
-<td class='confluenceTd'> Number of delete operations </td>
-</tr>
-<tr>
-<td class='confluenceTd'> GetMore </td>
-<td class='confluenceTd'> Number of getmore operations </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Command </td>
-<td class='confluenceTd'> Total number of commands issued to database </td>
-</tr>
-</tbody>
-</table>
+ <tr>
+ <th align="left"> Metric Name </th>
+ <th align="left"> Description </th>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> avgObjSize </td>
+ <td class='confluenceTd'> The average size of each document in bytes. This is the dataSize divided by the number of documents </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> collections </td>
+ <td class='confluenceTd'> Contains a count of the number of collections in that database </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> dataSize </td>
+ <td class='confluenceTd'> The total size in bytes of the data held in this database including the padding factor </td>
+ </tr>
+ <tr>
+ <tr>
+ <td class='confluenceTd'> fileSize </td>
+ <td class='confluenceTd'> The total size in bytes of the data files that hold the database </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> indexes </td>
+ <td class='confluenceTd'> Contains a count of the total number of indexes across all collections in the database </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> indexSize </td>
+ <td class='confluenceTd'> The total size in bytes of all indexes created on this database </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> nsSizeMB </td>
+ <td class='confluenceTd'> The total size of the namespace files (i.e. that end with .ns) for this database </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> numExtents </td>
+ <td class='confluenceTd'> Contains a count of the number of extents in the database across all collections </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> objects </td>
+ <td class='confluenceTd'> Contains a count of the number of objects (i.e. documents) in the database across all collections </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> storageSize </td>
+ <td class='confluenceTd'> The total amount of space in bytes allocated to collections in this database for document storage </td>
+ </tr>
+ </tbody>
+ </table>
 
-
-###Asserts
-
+####Metric Category: Collection Stats
+#####<collection name>
 <table><tbody>
-<tr>
-<th align="left"> Metric Name </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> Regular </td>
-<td class='confluenceTd'> Number of regular assertions raised since the server started </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Warning </td>
-<td class='confluenceTd'> Number of warnings raised since the server process started </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Msg </td>
-<td class='confluenceTd'> Number of message assertions raised since the process started </td>
-</tr>
-<tr>
-<td class='confluenceTd'> User </td>
-<td class='confluenceTd'> Number of "user asserts" that have occurred since the last time </td>
-</tr>
-<tr>
-<td class='confluenceTd'> Rollovers </td>
-<td class='confluenceTd'> Number of times that the rollover counter has rolled over since the last time </td>
-</tr>
-</tbody>
-</table>
-
+ <tr>
+ <th align="left"> Metric Name </th>
+ <th align="left"> Description </th>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> count </td>
+ <td class='confluenceTd'> The number of objects or documents in this collection </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> lastExtentSize </td>
+ <td class='confluenceTd'> The size of the last extent allocated </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> nindexes </td>
+ <td class='confluenceTd'> The number of indexes on the collection </td>
+ </tr>
+ <tr>
+ <tr>
+ <td class='confluenceTd'> numExtents </td>
+ <td class='confluenceTd'> The total number of contiguously allocated data file regions </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> paddingFactor </td>
+ <td class='confluenceTd'> The amount of space added to the end of each document at insert time </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> size </td>
+ <td class='confluenceTd'> The size of the data stored in this collection </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> storageSize </td>
+ <td class='confluenceTd'> The total amount of storage allocated to this collection for document storage </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> systemFlags </td>
+ <td class='confluenceTd'> Reports the flags on this collection that reflect internal server options </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> totalIndexSize </td>
+ <td class='confluenceTd'> The total size of all indexes. The scale argument affects this value </td>
+ </tr>
+ <tr>
+ <td class='confluenceTd'> userFlags </td>
+ <td class='confluenceTd'> Reports the flags on this collection set by the user </td>
+ </tr>
+ </tbody>
+ </table>
 
 
 ##Contributing

@@ -16,122 +16,115 @@
 
 package com.appdynamics.monitors.mongo;
 
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.*;
-
-import javax.naming.AuthenticationException;
-
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
-import org.apache.log4j.Logger;
-
 import com.appdynamics.monitors.mongo.json.ServerStats;
 import com.google.gson.Gson;
+import com.mongodb.CommandResult;
 import com.mongodb.DB;
+import com.mongodb.DBCollection;
 import com.mongodb.MongoClient;
+import com.mongodb.MongoCredential;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
 import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.naming.AuthenticationException;
+import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
-public class MongoDBMonitor extends AManagedMonitor
-{
+public class MongoDBMonitor extends AManagedMonitor {
     private static final String ARG_HOST = "host";
     private static final String ARG_PORT = "port";
     private static final String ARG_USER = "username";
     private static final String ARG_PASS = "password";
-    private static final String ARG_DB = "db";
+    private static final String ARG_DB   = "db";   
+    private static final String ADMIN_DB = "admin";
     private static final String ARG_XML_PATH = "properties-path";
 
     private static final String OK_RESPONSE = "1.0";
-    Logger logger = Logger.getLogger(this.getClass().getName());
+    private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
     private MongoClient mongoClient;
-	private ServerStats serverStats;
-    private String dbname;
-    private List<MongoCredential> credentials;
-    private List<DB> dbs = new ArrayList<DB>();
+
+    private static final String metricPathPrefix = "Custom Metrics|Mongo Server|";
+
     private String host;
     private String port;
 
-	/**
-	 * Main execution method that uploads the metrics to the AppDynamics Controller
-	 * @see com.singularity.ee.agent.systemagent.api.ITask#execute(java.util.Map, com.singularity.ee.agent.systemagent.api.TaskExecutionContext)
-	 */
-	public TaskOutput execute( Map<String, String> params, TaskExecutionContext arg1)
-			throws TaskExecutionException
-			{
-		try
-		{
-            getCredentials(params);
-            connect();
+    /**
+     * Main execution method that uploads the metrics to the AppDynamics Controller
+     *
+     * @see com.singularity.ee.agent.systemagent.api.ITask#execute(java.util.Map, com.singularity.ee.agent.systemagent.api.TaskExecutionContext)
+     */
+    public TaskOutput execute(Map<String, String> params, TaskExecutionContext arg1)
+            throws TaskExecutionException {
+        try {
+            MongoCredential adminCredentials = getAdminCredentials(params);
+            DB adminDB = connectToAdminDB(adminCredentials);
 
-            while(true){
-                for (DB db : dbs){
-                    try {
-                        serverStats = getServerStats(db);
-                        dbname = db.getName();
+            ServerStats serverStats = getServerStats(adminDB);
 
-                        printMetric("UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue(),
-                                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                                MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-                                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-                        );
+            printServerStats(serverStats);
 
-                        printGlobalLocksStats();
-                        printMemoryStats();
-                        printConnectionStats();
-                        printIndexCounterStats();
-                        printBackgroundFlushingStats();
-                        printNetworkStats();
-                        printOperationStats();
-                        printAssertStats();
-                    } catch (Exception e) {
-                        logger.error("Failed to get metrics", e);
+            List<MongoCredential> additionalDBDetails = getAdditionalDBDetails(params);
+
+            List<DB> additionalDBs = connect(additionalDBDetails);
+
+            for (DB db : additionalDBs) {
+                DBStats dbStats = getDBStats(db);
+                printDBStats(dbStats);
+
+                Set<String> collectionNames = db.getCollectionNames();
+                if (collectionNames != null && collectionNames.size() > 0) {
+                    for (String collectionName : collectionNames) {
+                        DBCollection collection = db.getCollection(collectionName);
+                        CommandResult collectionStatsResult = collection.getStats();
+                        if (collectionStatsResult != null && collectionStatsResult.ok()) {
+                            CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
+                            printCollectionStats(db.getName(), collectionStats);
+                        } else {
+                            String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName()+" failed";
+                            if (collectionStatsResult != null) {
+                                errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                            }
+                            logger.error(errorMessage);
+                        }
                     }
                 }
-
-                Thread.sleep(60000);
             }
-		}
-		catch (NullPointerException e){
-			logger.error("NullPointerException", e);
-		}
-		catch (Exception e)
-		{
-			logger.error("Exception", e);
-			return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
-		}
-		finally {
-			if(mongoClient != null) {
-				mongoClient.close();
-			}
-		}
-		return new TaskOutput("Mongo DB Metric Upload Complete");
-	}
+        } catch (Exception e) {
+            logger.error("Exception", e);
+            return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
+        } finally {
+            if (mongoClient != null) {
+                mongoClient.close();
+            }
+        }
+        return new TaskOutput("Mongo DB Metric Upload Complete");
+    }
 
-    private void getCredentials(final Map<String, String> args){
-        credentials = new ArrayList<MongoCredential>();
-        MongoCredential cred;
 
-        host = args.get(ARG_HOST);
-        port = args.get(ARG_PORT);
+    private DBStats getDBStats(DB db) {
+        DBStats dbStats = new Gson().fromJson(db.command("dbStats").toString().trim(), DBStats.class);
+        if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
+            logger.error("Error retrieving db stats. Invalid permissions set for this user.");
+        }
+        return dbStats;
+    }
 
-        cred = MongoCredential.createMongoCRCredential(
-                args.get(ARG_USER),
-                args.get(ARG_DB),
-                args.get(ARG_PASS).toCharArray());
+    private List<MongoCredential> getAdditionalDBDetails(Map<String, String> params) {
 
-        credentials.add(cred);
+        String xmlPath = params.get(ARG_XML_PATH);
 
-        String xmlPath = args.get(ARG_XML_PATH);
+        List<MongoCredential> additionalDBCredentials = new ArrayList<MongoCredential>();
+
         if (isNotEmpty(xmlPath)) {
             try {
                 SAXReader reader = new SAXReader();
@@ -140,377 +133,341 @@ public class MongoDBMonitor extends AManagedMonitor
 
                 for (Element credElem : (List<Element>) root.elements("credentials")) {
                     if (credElem.elementText(ARG_DB).length() > 0) {
-                        cred = MongoCredential.createMongoCRCredential(
+                        MongoCredential cred = MongoCredential.createMongoCRCredential(
                                 credElem.elementText(ARG_USER),
                                 credElem.elementText(ARG_DB),
                                 credElem.elementText(ARG_PASS).toCharArray());
-                        credentials.add(cred);
+                        additionalDBCredentials.add(cred);
                     }
                 }
             } catch (DocumentException e) {
                 logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials");
             }
         }
+        return additionalDBCredentials;
     }
 
-	/**
-	 * Connects to the Mongo DB Server
-	 * @throws 				UnknownHostException
-	 * @throws 				AuthenticationException
-	 */
-	public void connect() throws UnknownHostException, AuthenticationException
-	{
+    private DB connectToAdminDB(MongoCredential adminCredentials) {
+        try {
+            mongoClient = new MongoClient(host, Integer.parseInt(port));
+        } catch (UnknownHostException e) {
+            logger.error("Unable to connect to mongodb", e);
+            throw new RuntimeException("Unable to connect to mongodb", e);
+        }
+
+        DB db = mongoClient.getDB(adminCredentials.getSource());
+
+        try {
+            db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
+        } catch (Exception e) {
+            logger.error("Unable to authenticate", e);
+            throw new RuntimeException("Unable to authenticate", e);
+        }
+        return db;
+    }
+
+
+    private MongoCredential getAdminCredentials(final Map<String, String> params) {
+        MongoCredential cred;
+        host = params.get(ARG_HOST);
+        port = params.get(ARG_PORT);
+
+        String password = params.get(ARG_PASS);
+        if (password == null) {  //When Mongo is run with no auth, we don't need password to get stats 
+            password = "";
+        }
+
+        cred = MongoCredential.createMongoCRCredential(
+                params.get(ARG_USER),
+                ADMIN_DB,
+                password.toCharArray());
+        return cred;
+    }
+
+    /**
+     * Connects to the Mongo DB Server
+     *
+     * @param additionalDBDetails additional db information
+     * @throws UnknownHostException
+     * @throws AuthenticationException
+     */
+    public List<DB> connect(List<MongoCredential> additionalDBDetails) throws UnknownHostException, AuthenticationException {
         mongoClient = new MongoClient(host, Integer.parseInt(port));
-        for (MongoCredential cred : credentials){
+        List<DB> mongoDBs = new ArrayList<DB>();
+        for (MongoCredential cred : additionalDBDetails) {
             DB db = mongoClient.getDB(cred.getSource());
             if ((cred.getUserName() == null && cred.getPassword() == null)
                     || (cred.getUserName().equals("") && cred.getPassword().length == 0)
                     || db.isAuthenticated()
-                    || db.authenticate(cred.getUserName(),cred.getPassword())){
-                dbs.add(db);
+                    || db.authenticate(cred.getUserName(), cred.getPassword())) {
+                mongoDBs.add(db);
             } else {
                 logger.error("User is not allowed to view statistics for database: " + db.getName());
             }
         }
-	}
+        return mongoDBs;
+    }
 
-	/**
-	 * Returns the metric to the AppDynamics Controller.
-	 * @param 	metricName		Name of the Metric
-	 * @param 	metricValue		Value of the Metric
-	 * @param 	aggregation		Average OR Observation OR Sum
-	 * @param 	timeRollup		Average OR Current OR Sum
-	 * @param 	cluster			Collective OR Individual
-	 */
-	public void printMetric(String metricName, double metricValue, String aggregation, String timeRollup, String cluster)
-	{
-		try{
-			MetricWriter metricWriter = getMetricWriter(getMetricPrefix() + metricName,
-					aggregation,
-					timeRollup,
-					cluster
-					);
+    /**
+     * Returns the metric to the AppDynamics Controller.
+     *
+     * @param metricName  Name of the Metric
+     * @param metricValue Value of the Metric
+     */
+    public void printMetric(String metricName, double metricValue) {
+        try {
+            MetricWriter metricWriter = getMetricWriter(metricName,
+                    MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                    MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+                    MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+            );
 
-			metricWriter.printMetric(String.valueOf((long) metricValue));
-		} catch (NullPointerException e){
-			logger.info("NullPointerException: " + e.getMessage());
-		}
-	}
+            metricWriter.printMetric(String.valueOf((long) metricValue));
+        } catch (NullPointerException e) {
+            logger.info("NullPointerException: " + e.getMessage());
+        }
+    }
 
-	/**
-	 * Prints the Connection Statistics
-	 */
-	public void printConnectionStats()
-	{
-		try{
-			printMetric("Connections|Current", serverStats.getConnections().getCurrent().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    private void printServerStats(ServerStats serverStats) {
+        printUpTimeStats(serverStats);
+        printGlobalLocksStats(serverStats);
+        printMemoryStats(serverStats);
+        printConnectionStats(serverStats);
+        printIndexCounterStats(serverStats);
+        printBackgroundFlushingStats(serverStats);
+        printNetworkStats(serverStats);
+        printOperationStats(serverStats);
+        printAssertStats(serverStats);
+    }
 
-			printMetric("Connections|Available", serverStats.getConnections().getAvailable().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    private void printDBStats(DBStats dbStats) {
 
-		} catch (NullPointerException e){
-			logger.info("No information on Connections available");
-		}
-	}
+        String dbStatsPath = getDBStatsMetricPrefix(dbStats.getDb());
 
-	/**
-	 * Prints the Memory Statistics
-	 */
-	public void printMemoryStats()
-	{
-		try{
-			printMetric("Memory|Bits", serverStats.getMem().getBits().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        printMetric(dbStatsPath + "collections", dbStats.getCollections().doubleValue());
+        printMetric(dbStatsPath + "objects", dbStats.getObjects().doubleValue());
+        printMetric(dbStatsPath + "avgObjSize", dbStats.getAvgObjSize().doubleValue());
+        printMetric(dbStatsPath + "dataSize", dbStats.getDataSize().doubleValue());
+        printMetric(dbStatsPath + "storageSize", dbStats.getStorageSize().doubleValue());
+        printMetric(dbStatsPath + "numExtents", dbStats.getNumExtents().doubleValue());
+        printMetric(dbStatsPath + "indexes", dbStats.getIndexes().doubleValue());
+        printMetric(dbStatsPath + "indexSize", dbStats.getIndexSize().doubleValue());
+        printMetric(dbStatsPath + "fileSize", dbStats.getFileSize().doubleValue());
+        printMetric(dbStatsPath + "nsSizeMB", dbStats.getNsSizeMB().doubleValue());
+    }
 
-			printMetric("Memory|Resident", serverStats.getMem().getResident().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    private void printCollectionStats(String dbName, CollectionStats collectionStats) {
 
-			printMetric("Memory|Virtual", serverStats.getMem().getVirtual().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        String collectionStatsPath = getCollectionStatsMetricPrefix(dbName, collectionStats.getNs());
 
-			printMetric("Memory|Mapped", serverStats.getMem().getMapped().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        printMetric(collectionStatsPath + "count", collectionStats.getCount().doubleValue());
+        printMetric(collectionStatsPath + "size", collectionStats.getSize().doubleValue());
+        printMetric(collectionStatsPath + "storageSize", collectionStats.getStorageSize().doubleValue());
+        printMetric(collectionStatsPath + "numExtents", collectionStats.getNumExtents().doubleValue());
+        printMetric(collectionStatsPath + "nindexes", collectionStats.getNindexes().doubleValue());
+        printMetric(collectionStatsPath + "lastExtentSize", collectionStats.getLastExtentSize().doubleValue());
+        printMetric(collectionStatsPath + "paddingFactor", collectionStats.getPaddingFactor().doubleValue());
+        printMetric(collectionStatsPath + "systemFlags", collectionStats.getSystemFlags().doubleValue());
+        printMetric(collectionStatsPath + "userFlags", collectionStats.getUserFlags().doubleValue());
+        printMetric(collectionStatsPath + "totalIndexSize", collectionStats.getTotalIndexSize().doubleValue());
 
-			printMetric("Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        for (Map.Entry<String, Number> index : collectionStats.getIndexSizes().entrySet()) {
+            printMetric(collectionStatsPath + "Index Size|" + index.getKey(), index.getValue().doubleValue());
+        }
 
-		} catch (NullPointerException e){
-			logger.info("No information on Memory available");
-		}
-	}
+    }
 
-	/**
-	 * Prints the Global Lock Statistics
-	 */
-	public void printGlobalLocksStats()
-	{
-		try{
-			printMetric("Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    private void printUpTimeStats(ServerStats serverStats) {
+        printMetric(getServerStatsMetricPrefix() + "UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue()
+        );
+    }
 
-			printMetric("Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    /**
+     * Prints the Connection Statistics
+     *
+     * @param serverStats
+     */
+    public void printConnectionStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Connections|Current", serverStats.getConnections().getCurrent().doubleValue());
 
-			printMetric("Global Lock|Current Queue|Readers", serverStats.getGlobalLock().getCurrentQueue().getReaders().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Connections|Available", serverStats.getConnections().getAvailable().doubleValue());
 
-			printMetric("Global Lock|Current Queue|Writers", serverStats.getGlobalLock().getCurrentQueue().getWriters().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        } catch (NullPointerException e) {
+            logger.info("No information on Connections available");
+        }
+    }
 
-			printMetric("Global Lock|Active Clients|Total", serverStats.getGlobalLock().getActiveClients().getTotal().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    /**
+     * Prints the Memory Statistics
+     *
+     * @param serverStats
+     */
+    public void printMemoryStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Memory|Bits", serverStats.getMem().getBits().doubleValue());
 
-			printMetric("Global Lock|Active Clients|Readers", serverStats.getGlobalLock().getActiveClients().getReaders().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Memory|Resident", serverStats.getMem().getResident().doubleValue());
 
-			printMetric("Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Memory|Virtual", serverStats.getMem().getVirtual().doubleValue());
 
-		} catch (NullPointerException e){
-			logger.info("No information on Global Lock available");
-		}
-	}
+            printMetric(getServerStatsMetricPrefix() + "Memory|Mapped", serverStats.getMem().getMapped().doubleValue());
 
-	/**
-	 * Prints the Index Counter Statistics
-	 */
-	public void printIndexCounterStats()
-	{
-		try{
-			printMetric("Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getBtree().getAccesses().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().doubleValue());
 
-			printMetric("Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getBtree().getHits().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        } catch (NullPointerException e) {
+            logger.info("No information on Memory available");
+        }
+    }
 
-			printMetric("Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getBtree().getMisses().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    /**
+     * Prints the Global Lock Statistics
+     *
+     * @param serverStats Server stats
+     */
+    public void printGlobalLocksStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime().doubleValue());
 
-			printMetric("Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getBtree().getResets().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal().doubleValue());
 
-		} catch (NullPointerException e){
-			logger.info("No information on Index Counter available");
-		}
-	}
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Readers", serverStats.getGlobalLock().getCurrentQueue().getReaders().doubleValue());
 
-	/**
-	 * Prints the Background Flushing Statistics
-	 */
-	public void printBackgroundFlushingStats()
-	{
-		try{
-			printMetric("Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Writers", serverStats.getGlobalLock().getCurrentQueue().getWriters().doubleValue());
 
-			printMetric("Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Total", serverStats.getGlobalLock().getActiveClients().getTotal().doubleValue());
 
-			printMetric("Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Readers", serverStats.getGlobalLock().getActiveClients().getReaders().doubleValue());
 
-			printMetric("Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
-		} catch (NullPointerException e){
-			logger.info("No information on Background Flushing available");
-		}
-	}
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().doubleValue());
 
-	/**
-	 * Prints the Network Statistics
-	 */
-	public void printNetworkStats()
-	{
-		try{
-			printMetric("Network|Bytes In", serverStats.getNetwork().getBytesIn().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        } catch (NullPointerException e) {
+            logger.info("No information on Global Lock available");
+        }
+    }
 
-			printMetric("Network|Bytes Out", serverStats.getNetwork().getBytesOut().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    /**
+     * Prints the Index Counter Statistics
+     *
+     * @param serverStats
+     */
+    public void printIndexCounterStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getBtree().getAccesses().doubleValue());
 
-			printMetric("Network|Number Requests", serverStats.getNetwork().getBytesIn().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
-		} catch (NullPointerException e){
-			logger.info("No information on Network available");
-		}
-	}
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getBtree().getHits().doubleValue());
 
-	/**
-	 * Prints the Operation Statistics
-	 */
-	public void printOperationStats()
-	{
-		try{
-			printMetric("Operations|Insert", serverStats.getOpcounters().getInsert().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getBtree().getMisses().doubleValue());
 
-			printMetric("Operations|Query", serverStats.getOpcounters().getQuery().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getBtree().getResets().doubleValue());
 
-			printMetric("Operations|Update", serverStats.getOpcounters().getUpdate().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+        } catch (NullPointerException e) {
+            logger.info("No information on Index Counter available");
+        }
+    }
 
-			printMetric("Operations|Delete", serverStats.getOpcounters().getDelete().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    /**
+     * Prints the Background Flushing Statistics
+     *
+     * @param serverStats
+     */
+    public void printBackgroundFlushingStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes().doubleValue());
 
-			printMetric("Operations|Get More", serverStats.getOpcounters().getGetmore().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms().doubleValue());
 
-			printMetric("Operations|Command", serverStats.getOpcounters().getCommand().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
-		} catch (NullPointerException e){
-			logger.info("No information on Operations available");
-		}
-	}
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms().doubleValue());
 
-	/**
-	 * Prints Assert Statistics
-	 */
-	public void printAssertStats()
-	{
-		try{
-			printMetric("Asserts|Regular", serverStats.getAsserts().getRegular().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().doubleValue());
+        } catch (NullPointerException e) {
+            logger.info("No information on Background Flushing available");
+        }
+    }
 
-			printMetric("Asserts|Warning", serverStats.getAsserts().getWarning().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+    /**
+     * Prints the Network Statistics
+     *
+     * @param serverStats
+     */
+    public void printNetworkStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Network|Bytes In", serverStats.getNetwork().getBytesIn().doubleValue());
 
-			printMetric("Asserts|Message", serverStats.getAsserts().getMsg().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Network|Bytes Out", serverStats.getNetwork().getBytesOut().doubleValue());
 
-			printMetric("Asserts|User", serverStats.getAsserts().getWarning().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
+            printMetric(getServerStatsMetricPrefix() + "Network|Number Requests", serverStats.getNetwork().getBytesIn().doubleValue());
+        } catch (NullPointerException e) {
+            logger.info("No information on Network available");
+        }
+    }
 
-			printMetric("Asserts|Rollover", serverStats.getAsserts().getRollovers().doubleValue(),
-					MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-					MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-					MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-					);
-		} catch (NullPointerException e){
-			logger.info("No information on Asserts available");
-		}
-	}
+    /**
+     * Prints the Operation Statistics
+     *
+     * @param serverStats
+     */
+    public void printOperationStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Operations|Insert", serverStats.getOpcounters().getInsert().doubleValue());
 
-	/**
-	 * Metric Prefix
-	 * @return	String
-	 */
-	public String getMetricPrefix()
-	{
-        return "Custom Metrics|Mongo Server|"  + dbname + "|";
-	}
+            printMetric(getServerStatsMetricPrefix() + "Operations|Query", serverStats.getOpcounters().getQuery().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Operations|Update", serverStats.getOpcounters().getUpdate().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Operations|Delete", serverStats.getOpcounters().getDelete().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Operations|Get More", serverStats.getOpcounters().getGetmore().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Operations|Command", serverStats.getOpcounters().getCommand().doubleValue());
+        } catch (NullPointerException e) {
+            logger.info("No information on Operations available");
+        }
+    }
+
+    /**
+     * Prints Assert Statistics
+     *
+     * @param serverStats
+     */
+    public void printAssertStats(ServerStats serverStats) {
+        try {
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Regular", serverStats.getAsserts().getRegular().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Warning", serverStats.getAsserts().getWarning().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Message", serverStats.getAsserts().getMsg().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|User", serverStats.getAsserts().getWarning().doubleValue());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Rollover", serverStats.getAsserts().getRollovers().doubleValue());
+        } catch (NullPointerException e) {
+            logger.info("No information on Asserts available");
+        }
+    }
+
+    /**
+     * Metric Prefix
+     *
+     * @return String
+     */
+    private String getServerStatsMetricPrefix() {
+        return metricPathPrefix + "Server Stats|";
+    }
+
+    private String getDBStatsMetricPrefix(String dbName) {
+        return metricPathPrefix + "DB Stats|" + dbName + "|";
+    }
+
+    private String getCollectionStatsMetricPrefix(String dbName, String collectionName) {
+        return getDBStatsMetricPrefix(dbName) + "Collection Stats|" + collectionName + "|";
+    }
 
     private static boolean isNotEmpty(final String input) {
         return input != null && input.trim().length() > 0;
     }
 
-    private ServerStats getServerStats(DB db){
+    private ServerStats getServerStats(DB db) {
         ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
         if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
             logger.error("Server status: " + db.command("serverStatus"));
