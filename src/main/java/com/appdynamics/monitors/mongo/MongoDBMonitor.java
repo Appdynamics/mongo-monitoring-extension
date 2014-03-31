@@ -137,11 +137,11 @@ public class MongoDBMonitor extends AManagedMonitor {
         List<MongoCredential> additionalDBCredentials = new ArrayList<MongoCredential>();
 
         if (isNotEmpty(xmlPath)) {
-            File file = new File(installDir, xmlPath);
+            File file = resolvePath(xmlPath);
             if(file.exists()){
                 try {
                     SAXReader reader = new SAXReader();
-                    Document doc = reader.read(xmlPath);
+                    Document doc = reader.read(file);
                     Element root = doc.getRootElement();
 
                     for (Element credElem : (List<Element>) root.elements("credentials")) {
@@ -158,10 +158,19 @@ public class MongoDBMonitor extends AManagedMonitor {
                 }
             } else{
                 logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials." +
-                        "The absolute path is "+file.getAbsolutePath());
+                        "The absolute path is " + file.getAbsolutePath());
             }
         }
         return additionalDBCredentials;
+    }
+
+    private File resolvePath(String xmlPath) {
+        File file = new File(xmlPath);
+        if(file.exists()){
+            return file;
+        }else{
+            return new File(installDir,xmlPath);
+        }
     }
 
     private File resolveInstallDir() {
