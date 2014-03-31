@@ -18,29 +18,34 @@ package com.appdynamics.monitors.mongo;
 
 import com.appdynamics.monitors.mongo.json.ServerStats;
 import com.google.gson.Gson;
-import com.mongodb.CommandResult;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoCredential;
+import com.mongodb.*;
+import com.singularity.ee.agent.systemagent.SystemAgent;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
 import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.naming.AuthenticationException;
 import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
+import javax.naming.AuthenticationException;
+import java.io.File;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.net.UnknownHostException;
+import java.security.CodeSource;
+import java.security.ProtectionDomain;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 public class MongoDBMonitor extends AManagedMonitor {
+    private static final Logger logger = Logger.getLogger("com.singularity.monitors.mongo.MongoDBMonitor");
+
     private static final String ARG_HOST = "host";
     private static final String ARG_PORT = "port";
     private static final String ARG_USER = "username";
@@ -48,15 +53,22 @@ public class MongoDBMonitor extends AManagedMonitor {
     private static final String ARG_DB   = "db";   
     private static final String ADMIN_DB = "admin";
     private static final String ARG_XML_PATH = "properties-path";
-
-    private static final String OK_RESPONSE = "1.0";
-    private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
-    private MongoClient mongoClient;
-
     private static final String metricPathPrefix = "Custom Metrics|Mongo Server|";
+    private static final String OK_RESPONSE = "1.0";
 
+    private MongoClient mongoClient;
     private String host;
     private String port;
+    private File installDir;
+
+
+
+    public MongoDBMonitor() {
+        String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
+        logger.info(msg);
+        System.out.println(msg);
+        installDir = resolveInstallDir();
+    }
 
     /**
      * Main execution method that uploads the metrics to the AppDynamics Controller
@@ -114,7 +126,7 @@ public class MongoDBMonitor extends AManagedMonitor {
     private DBStats getDBStats(DB db) {
         DBStats dbStats = new Gson().fromJson(db.command("dbStats").toString().trim(), DBStats.class);
         if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
-            logger.error("Error retrieving db stats. Invalid permissions set for this user.");
+            logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= "+db.getName());
         }
         return dbStats;
     }
@@ -122,37 +134,74 @@ public class MongoDBMonitor extends AManagedMonitor {
     private List<MongoCredential> getAdditionalDBDetails(Map<String, String> params) {
 
         String xmlPath = params.get(ARG_XML_PATH);
-
         List<MongoCredential> additionalDBCredentials = new ArrayList<MongoCredential>();
 
         if (isNotEmpty(xmlPath)) {
-            try {
-                SAXReader reader = new SAXReader();
-                Document doc = reader.read(xmlPath);
-                Element root = doc.getRootElement();
+            File file = new File(installDir, xmlPath);
+            if(file.exists()){
+                try {
+                    SAXReader reader = new SAXReader();
+                    Document doc = reader.read(xmlPath);
+                    Element root = doc.getRootElement();
 
-                for (Element credElem : (List<Element>) root.elements("credentials")) {
-                    if (credElem.elementText(ARG_DB).length() > 0) {
-                        MongoCredential cred = MongoCredential.createMongoCRCredential(
-                                credElem.elementText(ARG_USER),
-                                credElem.elementText(ARG_DB),
-                                credElem.elementText(ARG_PASS).toCharArray());
-                        additionalDBCredentials.add(cred);
+                    for (Element credElem : (List<Element>) root.elements("credentials")) {
+                        if (credElem.elementText(ARG_DB).length() > 0) {
+                            MongoCredential cred = MongoCredential.createMongoCRCredential(
+                                    credElem.elementText(ARG_USER),
+                                    credElem.elementText(ARG_DB),
+                                    credElem.elementText(ARG_PASS).toCharArray());
+                            additionalDBCredentials.add(cred);
+                        }
                     }
+                } catch (DocumentException e) {
+                    logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials");
                 }
-            } catch (DocumentException e) {
-                logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials");
+            } else{
+                logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials." +
+                        "The absolute path is "+file.getAbsolutePath());
             }
         }
         return additionalDBCredentials;
+    }
+
+    private File resolveInstallDir() {
+        File installDir=null;
+        try{
+            ProtectionDomain pd = SystemAgent.class.getProtectionDomain();
+            if(pd!=null){
+                CodeSource cs = pd.getCodeSource();
+                if(cs!=null){
+                    URL url = cs.getLocation();
+                    String path = URLDecoder.decode(url.getFile(),"UTF-8");
+                    File dir = new File(path).getParentFile();
+                    if(dir.exists()){
+                        installDir = dir;
+                    } else{
+                        logger.error("Install dir resolved to "+dir.getAbsolutePath()+", however it doesnt exist.");
+                    }
+                }
+
+            }
+        }catch (Exception e){
+            logger.error("Error while resolving the Install Dir",e);
+        }
+        if(installDir!=null){
+            logger.info("Install dir resolved to "+installDir.getAbsolutePath());
+            return installDir;
+        } else{
+            File workDir = new File("");
+            logger.info("Failed to resolve install dir, returning current work dir"+workDir.getAbsolutePath());
+            return workDir;
+        }
     }
 
     private DB connectToAdminDB(MongoCredential adminCredentials) {
         try {
             mongoClient = new MongoClient(host, Integer.parseInt(port));
         } catch (UnknownHostException e) {
-            logger.error("Unable to connect to mongodb", e);
-            throw new RuntimeException("Unable to connect to mongodb", e);
+            String msg = String.format("Unable to connect to mongodb; host=%s, port=%s",host,port);
+            logger.error(msg, e);
+            throw new RuntimeException(msg, e);
         }
 
         DB db = mongoClient.getDB(adminCredentials.getSource());
@@ -160,8 +209,10 @@ public class MongoDBMonitor extends AManagedMonitor {
         try {
             db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
         } catch (Exception e) {
-            logger.error("Unable to authenticate", e);
-            throw new RuntimeException("Unable to authenticate", e);
+            String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
+                    adminCredentials.getSource(), adminCredentials.getUserName());
+            logger.error(msg, e);
+            throw new RuntimeException(msg, e);
         }
         return db;
     }
@@ -192,7 +243,6 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @throws AuthenticationException
      */
     public List<DB> connect(List<MongoCredential> additionalDBDetails) throws UnknownHostException, AuthenticationException {
-        mongoClient = new MongoClient(host, Integer.parseInt(port));
         List<DB> mongoDBs = new ArrayList<DB>();
         for (MongoCredential cred : additionalDBDetails) {
             DB db = mongoClient.getDB(cred.getSource());
@@ -471,8 +521,12 @@ public class MongoDBMonitor extends AManagedMonitor {
         ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
         if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
             logger.error("Server status: " + db.command("serverStatus"));
-            logger.error("Error retrieving server status. Invalid permissions set for this user.");
+            logger.error("Error retrieving server status. Invalid permissions set for this user.DB = "+db.getName());
         }
         return serverStats;
+    }
+
+    public static String getImplementationVersion() {
+        return MongoDBMonitor.class.getPackage().getImplementationTitle();
     }
 }
