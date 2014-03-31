@@ -24,8 +24,8 @@ Metrics include:
 
 ##Installation
 
-1. Run 'ant package' from the mongo-monitoring-extension directory
-2. Download the file MongoMonitor.zip found in the 'dist' directory into \<machineagent install dir\>/monitors/
+1. Run 'mvn clean install' from the mongo-monitoring-extension directory
+2. Download the file MongoMonitor-[version].zip found in the 'target' directory into \<machineagent install dir\>/monitors/
 3. Unzip the downloaded file
 4. In the newly created directory "MongoMonitor", edit the monitor.xml configuring the parameters specified below.
 5. If there are additional DB to be monitored, add the credentials to properties.xml
@@ -35,9 +35,9 @@ Metrics include:
 ##Rebuilding the Project
 
 1.  At the command line, go to the root directory (where all the files are located).
-2.  Type "ant" (without the quotes) and press Return.
+2.  Type "mvn clean install" (without the quotes) and press Return.
 
-    'dist' will be updated with the monitor.xml and mongo.jar
+    'target' will be updated with MongoMonitor-[version].zip
 
 ##Configuration
 
@@ -113,24 +113,21 @@ Metrics include:
 <th align="left"> Description </th>
 </tr>
 <tr>
-<td class='confluenceTd'> conf </td>
-<td class='confluenceTd'> Contains the monitor.xml and properties.xml </td>
-</tr>
-<tr>
-<td class='confluenceTd'> lib </td>
-<td class='confluenceTd'> Contains third-party project references </td>
-</tr>
-<tr>
-<td class='confluenceTd'> src </td>
+<td class='confluenceTd'> src/main/java </td>
 <td class='confluenceTd'> Contains source code to Mongo DB Custom Monitor </td>
 </tr>
 <tr>
-<td class='confluenceTd'> dist </td>
-<td class='confluenceTd'> Only obtained when using ant. Run 'ant build' to get binaries. Run 'ant package' to get the distributable .zip file. </td>
+<td class='confluenceTd'> src/main/resources/conf </td>
+<td class='confluenceTd'> Contains the monitor.xml and properties.xml </td>
 </tr>
 <tr>
-<td class='confluenceTd'> build.xml </td>
-<td class='confluenceTd'> Ant build script to package the project (required only if changing Java code) </td>
+<tr>
+<td class='confluenceTd'> target </td>
+<td class='confluenceTd'> The distributable zip will be created in this directory after the maven build. </td>
+</tr>
+<tr>
+<td class='confluenceTd'> pom.xml </td>
+<td class='confluenceTd'> Maven Pom </td>
 </tr>
 </tbody>
 </table>
