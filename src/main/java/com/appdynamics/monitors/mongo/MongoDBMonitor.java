@@ -154,7 +154,7 @@ public class MongoDBMonitor extends AManagedMonitor {
                         }
                     }
                 } catch (DocumentException e) {
-                    logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials");
+                    logger.error("Cannot read '" + file.getAbsolutePath() + "'. Monitor is running without additional credentials");
                 }
             } else{
                 logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials." +
