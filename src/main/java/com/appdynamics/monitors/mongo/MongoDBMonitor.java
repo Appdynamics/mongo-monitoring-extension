@@ -16,32 +16,55 @@
 
 package com.appdynamics.monitors.mongo;
 
+import java.io.File;
+import java.io.FileReader;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.net.UnknownHostException;
+import java.security.CodeSource;
+import java.security.KeyStore;
+import java.security.ProtectionDomain;
+import java.security.Security;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.naming.AuthenticationException;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+
+import org.apache.commons.net.util.SSLContextUtils;
+import org.apache.commons.net.util.TrustManagerUtils;
+import org.apache.log4j.Logger;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
+
 import com.appdynamics.monitors.mongo.json.ServerStats;
 import com.google.gson.Gson;
-import com.mongodb.*;
+import com.mongodb.CommandResult;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoCredential;
+import com.mongodb.ServerAddress;
 import com.singularity.ee.agent.systemagent.SystemAgent;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
 import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-import org.apache.log4j.Logger;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
-
-import javax.naming.AuthenticationException;
-import java.io.File;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.UnknownHostException;
-import java.security.CodeSource;
-import java.security.ProtectionDomain;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class MongoDBMonitor extends AManagedMonitor {
     private static final Logger logger = Logger.getLogger("com.singularity.monitors.mongo.MongoDBMonitor");
@@ -50,6 +73,8 @@ public class MongoDBMonitor extends AManagedMonitor {
     private static final String ARG_PORT = "port";
     private static final String ARG_USER = "username";
     private static final String ARG_PASS = "password";
+    private static final String USE_SSL = "use-ssl";
+    private static final String PEM_FILE_PATH = "pem-file";
     private static final String ARG_DB   = "db";   
     private static final String ADMIN_DB = "admin";
     private static final String ARG_XML_PATH = "properties-path";
@@ -60,8 +85,6 @@ public class MongoDBMonitor extends AManagedMonitor {
     private String host;
     private String port;
     private File installDir;
-
-
 
     public MongoDBMonitor() {
         String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
@@ -79,7 +102,10 @@ public class MongoDBMonitor extends AManagedMonitor {
             throws TaskExecutionException {
         try {
             MongoCredential adminCredentials = getAdminCredentials(params);
-            DB adminDB = connectToAdminDB(adminCredentials);
+            
+            MongoClientOptions options = getMongoClientOptions(params);
+            
+            DB adminDB = connectToAdminDB(adminCredentials, options);
 
             ServerStats serverStats = getServerStats(adminDB);
 
@@ -146,10 +172,12 @@ public class MongoDBMonitor extends AManagedMonitor {
 
                     for (Element credElem : (List<Element>) root.elements("credentials")) {
                         if (credElem.elementText(ARG_DB).length() > 0) {
+                        	//String password = new String(Base64.decodeBase64(credElem.elementText(ARG_PASS)));
+                        	String password = credElem.elementText(ARG_PASS);
                             MongoCredential cred = MongoCredential.createMongoCRCredential(
                                     credElem.elementText(ARG_USER),
                                     credElem.elementText(ARG_DB),
-                                    credElem.elementText(ARG_PASS).toCharArray());
+                                    password.toCharArray());
                             additionalDBCredentials.add(cred);
                         }
                     }
@@ -204,9 +232,13 @@ public class MongoDBMonitor extends AManagedMonitor {
         }
     }
 
-    private DB connectToAdminDB(MongoCredential adminCredentials) {
+    private DB connectToAdminDB(MongoCredential adminCredentials, MongoClientOptions options) {
         try {
-            mongoClient = new MongoClient(host, Integer.parseInt(port));
+        	if(options != null) {
+        		mongoClient = new MongoClient(new ServerAddress(host, Integer.parseInt(port)), options);
+        	} else {
+        		mongoClient = new MongoClient(host, Integer.parseInt(port));
+        	}
         } catch (UnknownHostException e) {
             String msg = String.format("Unable to connect to mongodb; host=%s, port=%s",host,port);
             logger.error(msg, e);
@@ -226,13 +258,60 @@ public class MongoDBMonitor extends AManagedMonitor {
         return db;
     }
 
+    private MongoClientOptions getMongoClientOptions(Map<String, String> params) {
+    	String useSSL = params.get(USE_SSL);
+    	MongoClientOptions clientOpts = null;
+    	if(Boolean.valueOf(useSSL)) {
+    		String filePath = params.get(PEM_FILE_PATH);
+    		if(isNotEmpty(filePath)) {
+    			try {
+					clientOpts = new MongoClientOptions.Builder().socketFactory(getSocketFactoryFromPEM(filePath)).build();
+				} catch (Exception e) {
+					logger.error("Error establishing ssl socket factory", e);
+					throw new RuntimeException("Error establishing ssl socket factory");
+				}
+    		} else {
+    			String msg = "The argument "+ PEM_FILE_PATH + "is null or empty in monitor.xml";
+    			logger.error(msg);
+    			throw new RuntimeException(msg);
+    		}
+    	} else {
+    		logger.debug(USE_SSL + " value in monitor.xml set to " + useSSL);
+    	}
+		return clientOpts;
+	}
+    
+    private SSLSocketFactory getSocketFactoryFromPEM(String filePath) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+        
+        PEMParser pemParser = new PEMParser(new FileReader(resolvePath(filePath)));
+		pemParser.readObject();
+		PemObject pemObject = pemParser.readPemObject();
+		pemParser.close();
+		
+		X509CertificateHolder holder = new X509CertificateHolder(pemObject.getContent());
+        X509Certificate bc = new JcaX509CertificateConverter().setProvider("BC")
+                .getCertificate(holder);
 
-    private MongoCredential getAdminCredentials(final Map<String, String> params) {
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keyStore.load(null, null);
+        keyStore.setCertificateEntry("ca", bc);
+
+        TrustManager trustManager = TrustManagerUtils.getDefaultTrustManager(keyStore);
+        SSLContext sslContext = SSLContextUtils.createSSLContext("TLS", null, trustManager);
+        
+        return sslContext.getSocketFactory();
+    }
+
+	private MongoCredential getAdminCredentials(final Map<String, String> params) {
         MongoCredential cred;
         host = params.get(ARG_HOST);
         port = params.get(ARG_PORT);
 
+        //String encryptedPassword = params.get(ARG_PASS);
+        //String password = new String(Base64.decodeBase64(encryptedPassword));
         String password = params.get(ARG_PASS);
+        
         if (password == null) {  //When Mongo is run with no auth, we don't need password to get stats 
             password = "";
         }
@@ -282,8 +361,8 @@ public class MongoDBMonitor extends AManagedMonitor {
             );
 
             metricWriter.printMetric(String.valueOf((long) metricValue));
-        } catch (NullPointerException e) {
-            logger.info("NullPointerException: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error(e.getMessage());
         }
     }
 
@@ -300,19 +379,20 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printDBStats(DBStats dbStats) {
+    	if(dbStats != null) {
+    		String dbStatsPath = getDBStatsMetricPrefix(dbStats.getDb());
 
-        String dbStatsPath = getDBStatsMetricPrefix(dbStats.getDb());
-
-        printMetric(dbStatsPath + "collections", dbStats.getCollections().doubleValue());
-        printMetric(dbStatsPath + "objects", dbStats.getObjects().doubleValue());
-        printMetric(dbStatsPath + "avgObjSize", dbStats.getAvgObjSize().doubleValue());
-        printMetric(dbStatsPath + "dataSize", dbStats.getDataSize().doubleValue());
-        printMetric(dbStatsPath + "storageSize", dbStats.getStorageSize().doubleValue());
-        printMetric(dbStatsPath + "numExtents", dbStats.getNumExtents().doubleValue());
-        printMetric(dbStatsPath + "indexes", dbStats.getIndexes().doubleValue());
-        printMetric(dbStatsPath + "indexSize", dbStats.getIndexSize().doubleValue());
-        printMetric(dbStatsPath + "fileSize", dbStats.getFileSize().doubleValue());
-        printMetric(dbStatsPath + "nsSizeMB", dbStats.getNsSizeMB().doubleValue());
+            printMetric(dbStatsPath + "collections", dbStats.getCollections().doubleValue());
+            printMetric(dbStatsPath + "objects", dbStats.getObjects().doubleValue());
+            printMetric(dbStatsPath + "avgObjSize", dbStats.getAvgObjSize().doubleValue());
+            printMetric(dbStatsPath + "dataSize", dbStats.getDataSize().doubleValue());
+            printMetric(dbStatsPath + "storageSize", dbStats.getStorageSize().doubleValue());
+            printMetric(dbStatsPath + "numExtents", dbStats.getNumExtents().doubleValue());
+            printMetric(dbStatsPath + "indexes", dbStats.getIndexes().doubleValue());
+            printMetric(dbStatsPath + "indexSize", dbStats.getIndexSize().doubleValue());
+            printMetric(dbStatsPath + "fileSize", dbStats.getFileSize().doubleValue());
+            printMetric(dbStatsPath + "nsSizeMB", dbStats.getNsSizeMB().doubleValue());
+    	}
     }
 
     private void printCollectionStats(String dbName, CollectionStats collectionStats) {
@@ -352,8 +432,8 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Connections|Available", serverStats.getConnections().getAvailable().doubleValue());
 
-        } catch (NullPointerException e) {
-            logger.info("No information on Connections available");
+        } catch (Exception e) {
+            logger.warn("No information on Connections available");
         }
     }
 
@@ -374,8 +454,8 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().doubleValue());
 
-        } catch (NullPointerException e) {
-            logger.info("No information on Memory available");
+        } catch (Exception e) {
+            logger.warn("No information on Memory available");
         }
     }
 
@@ -400,8 +480,8 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().doubleValue());
 
-        } catch (NullPointerException e) {
-            logger.info("No information on Global Lock available");
+        } catch (Exception e) {
+            logger.warn("No information on Global Lock available");
         }
     }
 
@@ -420,8 +500,8 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getBtree().getResets().doubleValue());
 
-        } catch (NullPointerException e) {
-            logger.info("No information on Index Counter available");
+        } catch (Exception e) {
+            logger.warn("No information on Index Counter available");
         }
     }
 
@@ -439,8 +519,8 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms().doubleValue());
 
             printMetric(getServerStatsMetricPrefix() + "Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().doubleValue());
-        } catch (NullPointerException e) {
-            logger.info("No information on Background Flushing available");
+        } catch (Exception e) {
+            logger.warn("No information on Background Flushing available");
         }
     }
 
@@ -456,8 +536,8 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Network|Bytes Out", serverStats.getNetwork().getBytesOut().doubleValue());
 
             printMetric(getServerStatsMetricPrefix() + "Network|Number Requests", serverStats.getNetwork().getBytesIn().doubleValue());
-        } catch (NullPointerException e) {
-            logger.info("No information on Network available");
+        } catch (Exception e) {
+            logger.warn("No information on Network available");
         }
     }
 
@@ -479,8 +559,8 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Operations|Get More", serverStats.getOpcounters().getGetmore().doubleValue());
 
             printMetric(getServerStatsMetricPrefix() + "Operations|Command", serverStats.getOpcounters().getCommand().doubleValue());
-        } catch (NullPointerException e) {
-            logger.info("No information on Operations available");
+        } catch (Exception e) {
+            logger.warn("No information on Operations available");
         }
     }
 
@@ -500,8 +580,8 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Asserts|User", serverStats.getAsserts().getWarning().doubleValue());
 
             printMetric(getServerStatsMetricPrefix() + "Asserts|Rollover", serverStats.getAsserts().getRollovers().doubleValue());
-        } catch (NullPointerException e) {
-            logger.info("No information on Asserts available");
+        } catch (Exception e) {
+            logger.warn("No information on Asserts available");
         }
     }
 

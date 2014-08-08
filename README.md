@@ -62,6 +62,14 @@ Metrics include:
 <td class='confluenceTd'> password </td>
 <td class='confluenceTd'> Password to access mongo db </td>
 </tr>
+<tr>
+<td class='confluenceTd'> use-ssl </td>
+<td class='confluenceTd'> true/false; "true" if MongoDB is started with SSL </td>
+</tr>
+<tr>
+<td class='confluenceTd'> pem-file </td>
+<td class='confluenceTd'> Path to pem-file with which MongoDB is started (monitors/MongoMonitor/mongodb.pem) </td>
+</tr>
 </tbody>
 </table>
 
@@ -87,8 +95,12 @@ Metrics include:
                 <task-arguments>
                         <argument name="host" is-required="true" default-value="localhost" />
                         <argument name="port" is-required="true" default-value="27017" />
+                        <!--User should have clusterAdmin role -->
                         <argument name="username" is-required="true" default-value="admin" />
                         <argument name="password" is-required="true" default-value="admin" />
+                        <!-- SSL: If ssl enabled, change "use-ssl" to true and point pem-file to .pem file -->
+                        <argument name="use-ssl" is-required="false" default-value="false" />
+                        <argument name="pem-file" is-required="false" default-value="monitors/MongoMonitor/mongodb.pem" />
 
                         <!-- Additional MongoDB credentials (OPTIONAL)
                                 Additional MongoDB credentials can be placed in properties.xml
