@@ -27,6 +27,7 @@ import java.security.ProtectionDomain;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +50,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
+import com.appdynamics.extensions.crypto.CryptoUtil;
 import com.appdynamics.monitors.mongo.json.ServerStats;
 import com.google.gson.Gson;
 import com.mongodb.CommandResult;
@@ -66,7 +68,13 @@ import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 
 public class MongoDBMonitor extends AManagedMonitor {
-    private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
+    private static final String ENCRYPTION_KEY = "encryption-key";
+
+	private static final String PASSWORD_ENCRYPTED = "password-encrypted";
+
+	private static String encryptionKey;
+
+	private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
 
     private static final String ARG_HOST = "host";
     private static final String ARG_PORT = "port";
@@ -116,26 +124,30 @@ public class MongoDBMonitor extends AManagedMonitor {
             List<DB> additionalDBs = connect(additionalDBDetails);
 
             for (DB db : additionalDBs) {
-                DBStats dbStats = getDBStats(db);
-                printDBStats(dbStats);
+            	try {
+            		DBStats dbStats = getDBStats(db);
+                    printDBStats(dbStats);
 
-                Set<String> collectionNames = db.getCollectionNames();
-                if (collectionNames != null && collectionNames.size() > 0) {
-                    for (String collectionName : collectionNames) {
-                        DBCollection collection = db.getCollection(collectionName);
-                        CommandResult collectionStatsResult = collection.getStats();
-                        if (collectionStatsResult != null && collectionStatsResult.ok()) {
-                            CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
-                            printCollectionStats(db.getName(), collectionStats);
-                        } else {
-                            String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName()+" failed";
-                            if (collectionStatsResult != null) {
-                                errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                    Set<String> collectionNames = db.getCollectionNames();
+                    if (collectionNames != null && collectionNames.size() > 0) {
+                        for (String collectionName : collectionNames) {
+                            DBCollection collection = db.getCollection(collectionName);
+                            CommandResult collectionStatsResult = collection.getStats();
+                            if (collectionStatsResult != null && collectionStatsResult.ok()) {
+                                CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
+                                printCollectionStats(db.getName(), collectionStats);
+                            } else {
+                                String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName()+" failed";
+                                if (collectionStatsResult != null) {
+                                    errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                                }
+                                logger.error(errorMessage);
                             }
-                            logger.error(errorMessage);
                         }
                     }
-                }
+				} catch (Exception e) {
+					logger.error(e);
+				}
             }
             logger.info("Mongo Monitoring Task completed successfully");
             return new TaskOutput("Mongo DB Metric Upload Complete");
@@ -172,8 +184,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
                     for (Element credElem : (List<Element>) root.elements("credentials")) {
                         if (credElem.elementText(ARG_DB).length() > 0) {
-                        	//String password = new String(Base64.decodeBase64(credElem.elementText(ARG_PASS)));
-                        	String password = credElem.elementText(ARG_PASS);
+                        	String password = getDBPassword(credElem);
                             MongoCredential cred = MongoCredential.createMongoCRCredential(
                                     credElem.elementText(ARG_USER),
                                     credElem.elementText(ARG_DB),
@@ -302,18 +313,41 @@ public class MongoDBMonitor extends AManagedMonitor {
         return sslContext.getSocketFactory();
     }
 
+    private String getPassword(Map<String,String> taskArguments){
+        if(taskArguments.get(ARG_PASS) != null){
+            return taskArguments.get(ARG_PASS);
+        }
+        else if(taskArguments.containsKey(PASSWORD_ENCRYPTED)) {
+        	encryptionKey = taskArguments.get(ENCRYPTION_KEY);
+        	String encryptedPassword = taskArguments.get(PASSWORD_ENCRYPTED);
+        	return getDecryptedPassword(encryptionKey, encryptedPassword);
+        }
+        return "";
+    }
+    
+    private String getDBPassword(Element credElem) {
+    	if(credElem.elements().contains(ARG_PASS)) {
+    		return credElem.elementText(ARG_PASS);
+    	} else if (credElem.elements().contains(PASSWORD_ENCRYPTED)) {
+    		String encryptedPassword = credElem.elementText(PASSWORD_ENCRYPTED);
+    		return getDecryptedPassword(encryptionKey, encryptedPassword);
+    	}
+    	return "";
+    }
+    
+    private String getDecryptedPassword(String encryptionKey, String encryptedPassword) {
+    	Map<String,String> argsForDecryption = new HashMap<String, String>();
+        argsForDecryption.put(PASSWORD_ENCRYPTED, encryptedPassword);
+        argsForDecryption.put(ENCRYPTION_KEY, encryptionKey);
+        return CryptoUtil.getPassword(argsForDecryption);
+    }
+    
 	private MongoCredential getAdminCredentials(final Map<String, String> params) {
         MongoCredential cred;
         host = params.get(ARG_HOST);
         port = params.get(ARG_PORT);
 
-        //String encryptedPassword = params.get(ARG_PASS);
-        //String password = new String(Base64.decodeBase64(encryptedPassword));
-        String password = params.get(ARG_PASS);
-        
-        if (password == null) {  //When Mongo is run with no auth, we don't need password to get stats 
-            password = "";
-        }
+        String password = getPassword(params);
 
         cred = MongoCredential.createMongoCRCredential(
                 params.get(ARG_USER),

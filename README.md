@@ -117,6 +117,21 @@ Metrics include:
 
 ```
 
+##Password Encryption Support
+
+To avoid setting the clear text password in the monitor.xml and properties.xml, please follow the process below to encrypt the passwords
+
+1. Download the util jar to encrypt the password from [here](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) 
+2. Encrypt password from the commandline
+java -cp "appd-exts-commons-1.1.2.jar" com.appdynamics.extensions.crypto.Encryptor myKey myPassword
+3. Add the following properties in the monitor.xml substituting the default password argument.
+`
+<argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/>
+<argument name="encryption-key" is-required="true" default-value="myKey"/>
+`
+4. For every db, use the same encryption key to encrypt the password and substitue the default password argument with
+`<password-encrypted>ENCRYPTED_PASSWORD</password-encrypted>`
+
 ##Directory Structure
 
 <table><tbody>
@@ -500,4 +515,4 @@ Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/Extensions/
 
 ##Support
 
-For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto:ace-request@appdynamics.com).
+For any questions or feature request, please contact [AppDynamics Support](mailto:help@appdynamics.com).

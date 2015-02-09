@@ -8,6 +8,8 @@
         User should have read permissions on the given db
         <username>user</username>
         <password>guest</password>
+                   OR
+        <password-encrypted>encpassword</password-encrypted>
         <db>mydb</db>
     </credentials>
 -->
