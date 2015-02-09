@@ -121,14 +121,14 @@ Metrics include:
 
 To avoid setting the clear text password in the monitor.xml and properties.xml, please follow the process below to encrypt the passwords
 
-1. Download the util jar to encrypt the password from [here](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) 
+1. Download the util jar to encrypt the password from [https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) and navigate to the downloaded directory
 2. Encrypt password from the commandline
-java -cp "appd-exts-commons-1.1.2.jar" com.appdynamics.extensions.crypto.Encryptor myKey myPassword
+java -cp appd-exts-commons-1.1.2.jar com.appdynamics.extensions.crypto.Encryptor myKey myPassword
 3. Add the following properties in the monitor.xml substituting the default password argument.
-`
+```
 <argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/>
 <argument name="encryption-key" is-required="true" default-value="myKey"/>
-`
+```
 4. For every db, use the same encryption key to encrypt the password and substitue the default password argument with
 `<password-encrypted>ENCRYPTED_PASSWORD</password-encrypted>`
 
@@ -507,7 +507,7 @@ Consider this value in combination with the value of Current to understand the c
 
 ##Contributing
 
-Always feel free to fork and contribute any changes directly via [GitHub](https://github.com/Appdynamics/mongo-monitoring-extension).
+Always feel free to fork and contribute any changes directly here on GitHub.
 
 ##Community
 
