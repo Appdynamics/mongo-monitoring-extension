@@ -123,14 +123,14 @@ To avoid setting the clear text password in the monitor.xml and properties.xml, 
 
 1. Download the util jar to encrypt the password from [https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) and navigate to the downloaded directory
 2. Encrypt password from the commandline
-java -cp appd-exts-commons-1.1.2.jar com.appdynamics.extensions.crypto.Encryptor myKey myPassword
+`java -cp appd-exts-commons-1.1.2.jar com.appdynamics.extensions.crypto.Encryptor myKey myPassword`
 3. Add the following properties in the monitor.xml substituting the default password argument.
-```
-<argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/>
-<argument name="encryption-key" is-required="true" default-value="myKey"/>
-```
-4. For every db, use the same encryption key to encrypt the password and substitue the default password argument with
-`<password-encrypted>ENCRYPTED_PASSWORD</password-encrypted>`
+
+ ```
+ <argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/>
+ <argument name="encryption-key" is-required="true" default-value="myKey"/>
+ ```
+4. For every db, use the same encryption key to encrypt the password and substitue the default password argument with `<password-encrypted>ENCRYPTED_PASSWORD</password-encrypted>`
 
 ##Directory Structure
 
