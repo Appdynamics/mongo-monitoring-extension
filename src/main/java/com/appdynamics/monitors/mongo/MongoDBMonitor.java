@@ -43,7 +43,6 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -67,7 +66,7 @@ import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 
 public class MongoDBMonitor extends AManagedMonitor {
-    private static final Logger logger = Logger.getLogger("com.singularity.monitors.mongo.MongoDBMonitor");
+    private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
 
     private static final String ARG_HOST = "host";
     private static final String ARG_PORT = "port";
@@ -100,6 +99,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      */
     public TaskOutput execute(Map<String, String> params, TaskExecutionContext arg1)
             throws TaskExecutionException {
+    	logger.info("Starting Mongo Monitoring Task");
         try {
             MongoCredential adminCredentials = getAdminCredentials(params);
             
@@ -137,6 +137,8 @@ public class MongoDBMonitor extends AManagedMonitor {
                     }
                 }
             }
+            logger.info("Mongo Monitoring Task completed successfully");
+            return new TaskOutput("Mongo DB Metric Upload Complete");
         } catch (Exception e) {
             logger.error("Exception", e);
             return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
@@ -145,10 +147,8 @@ public class MongoDBMonitor extends AManagedMonitor {
                 mongoClient.close();
             }
         }
-        return new TaskOutput("Mongo DB Metric Upload Complete");
     }
-
-
+    
     private DBStats getDBStats(DB db) {
         DBStats dbStats = new Gson().fromJson(db.command("dbStats").toString().trim(), DBStats.class);
         if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
@@ -246,14 +246,13 @@ public class MongoDBMonitor extends AManagedMonitor {
         }
 
         DB db = mongoClient.getDB(adminCredentials.getSource());
-
-        try {
-            db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
-        } catch (Exception e) {
-            String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
+        
+        boolean authenticated = db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
+        if(!authenticated) {
+        	String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
                     adminCredentials.getSource(), adminCredentials.getUserName());
-            logger.error(msg, e);
-            throw new RuntimeException(msg, e);
+            logger.error(msg);
+            throw new RuntimeException(msg);
         }
         return db;
     }
