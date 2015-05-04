@@ -1,7 +1,6 @@
 # AppDynamics MongoDB Monitoring Extension
 
 ##Use Case
-
 The MongoDB custom monitor captures statistics from the MongoDB server and displays them in the AppDynamics Metric Browser.
 
 This extension works only with the standalone machine agent.
@@ -23,7 +22,6 @@ Metrics include:
 * Cluster related stats
 
 ##Installation
-
 1. Run 'mvn clean install' from the mongo-monitoring-extension directory
 2. Download the file MongoMonitor-[version].zip found in the 'target' directory into \<machineagent install dir\>/monitors/
 3. Unzip the downloaded file
@@ -32,15 +30,8 @@ Metrics include:
 5. Restart the machineagent
 6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
 
-##Rebuilding the Project
-
-1.  At the command line, go to the root directory (where all the files are located).
-2.  Type "mvn clean install" (without the quotes) and press Return.
-
-    'target' will be updated with MongoMonitor-[version].zip
 
 ##Configuration
-
 <table><tbody>
 <tr>
 <th align="left"> Parameter </th>
@@ -56,11 +47,11 @@ Metrics include:
 </tr>
 <tr>
 <td class='confluenceTd'> username </td>
-<td class='confluenceTd'> Username with cluster admin role to access mongo db server status </td>
+<td class='confluenceTd'> Username with clusterMonitor role on admin database to access serverStatus </td>
 </tr>
 <tr>
 <td class='confluenceTd'> password </td>
-<td class='confluenceTd'> Password to access mongo db </td>
+<td class='confluenceTd'> Password</td>
 </tr>
 <tr>
 <td class='confluenceTd'> use-ssl </td>
@@ -73,12 +64,8 @@ Metrics include:
 </tbody>
 </table>
 
-#####Note: Ensure that the user has appropriate permissions to the database! Otherwise, metrics will not be displayed in the AppDynamics Metric Browser.
-
 ###Example Monitor XML
-
 ```
-
 <monitor>
         <name>Mongo DBMonitor</name>
         <type>managed</type>
@@ -95,7 +82,7 @@ Metrics include:
                 <task-arguments>
                         <argument name="host" is-required="true" default-value="localhost" />
                         <argument name="port" is-required="true" default-value="27017" />
-                        <!--User should have clusterAdmin role -->
+                        <!--User should have clusterMonitor role on admin database -->
                         <argument name="username" is-required="true" default-value="admin" />
                         <argument name="password" is-required="true" default-value="admin" />
                         <!-- SSL: If ssl enabled, change "use-ssl" to true and point pem-file to .pem file -->
@@ -108,17 +95,15 @@ Metrics include:
                         <argument name="properties-path" is-required="false" default-value="monitors/MongoMonitor/properties.xml" />
                 </task-arguments>
                 <java-task>
-                    <classpath>MongoMonitor.jar;lib/gson-2.2.2.jar;lib/mongo-java-driver-2.11.3.jar;lib/dom4j-1.6.1.jar</classpath>
+                    <classpath>mongo-monitoring-extension.jar</classpath>
                         <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
                 </java-task>
         </monitor-run-task>
 </monitor>
-
-
 ```
+#####Note: Ensure that the user has appropriate permissions to the individual databases! Otherwise, metrics will not be displayed in the AppDynamics Metric Browser.
 
 ##Password Encryption Support
-
 To avoid setting the clear text password in the monitor.xml and properties.xml, please follow the process below to encrypt the passwords
 
 1. Download the util jar to encrypt the password from [https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) and navigate to the downloaded directory
@@ -158,7 +143,6 @@ To avoid setting the clear text password in the monitor.xml and properties.xml, 
 </tr>
 </tbody>
 </table>
-
 
 
 *Main Java File*: **src/com/appdynamics/monitors/mongo/MongoDBMonitor.java**  -\> This file contains the metric parsing and printing.

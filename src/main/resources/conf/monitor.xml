@@ -15,7 +15,7 @@
                 <task-arguments>
                         <argument name="host" is-required="true" default-value="localhost" />
                         <argument name="port" is-required="true" default-value="27017" />
-                        <!--User should have clusterAdmin role -->
+                        <!--User should have clusterMonitor role on admin database to access db.serverStatus() -->
                         <argument name="username" is-required="true" default-value="admin" />
                         <argument name="password" is-required="true" default-value="admin" />
                         <!-- <argument name="encryption-key" is-required="false" default-value="myKey"/>
