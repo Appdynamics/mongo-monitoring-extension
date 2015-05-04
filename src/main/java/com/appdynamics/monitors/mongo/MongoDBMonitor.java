@@ -395,7 +395,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             metricWriter.printMetric(String.valueOf((long) metricValue));
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("Exception while reporting metric to Controller", e);
         }
     }
 
@@ -466,7 +466,7 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Connections|Available", serverStats.getConnections().getAvailable().doubleValue());
 
         } catch (Exception e) {
-            logger.warn("No information on Connections available");
+            logger.warn("No information on Connections available", e);
         }
     }
 
@@ -488,7 +488,7 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().doubleValue());
 
         } catch (Exception e) {
-            logger.warn("No information on Memory available");
+            logger.warn("No information on Memory available", e);
         }
     }
 
@@ -514,7 +514,7 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().doubleValue());
 
         } catch (Exception e) {
-            logger.warn("No information on Global Lock available");
+            logger.warn("No information on Global Lock available", e);
         }
     }
 
@@ -525,16 +525,16 @@ public class MongoDBMonitor extends AManagedMonitor {
      */
     public void printIndexCounterStats(ServerStats serverStats) {
         try {
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getBtree().getAccesses().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getAccesses().doubleValue());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getBtree().getHits().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getHits().doubleValue());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getBtree().getMisses().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getMisses().doubleValue());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getBtree().getResets().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getResets().doubleValue());
 
         } catch (Exception e) {
-            logger.warn("No information on Index Counter available");
+            logger.warn("No information on Index Counter available", e);
         }
     }
 
@@ -553,7 +553,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().doubleValue());
         } catch (Exception e) {
-            logger.warn("No information on Background Flushing available");
+            logger.warn("No information on Background Flushing available", e);
         }
     }
 
@@ -570,7 +570,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Network|Number Requests", serverStats.getNetwork().getBytesIn().doubleValue());
         } catch (Exception e) {
-            logger.warn("No information on Network available");
+            logger.warn("No information on Network available", e);
         }
     }
 
@@ -593,7 +593,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Operations|Command", serverStats.getOpcounters().getCommand().doubleValue());
         } catch (Exception e) {
-            logger.warn("No information on Operations available");
+            logger.warn("No information on Operations available", e);
         }
     }
 
@@ -614,7 +614,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             printMetric(getServerStatsMetricPrefix() + "Asserts|Rollover", serverStats.getAsserts().getRollovers().doubleValue());
         } catch (Exception e) {
-            logger.warn("No information on Asserts available");
+            logger.warn("No information on Asserts available", e);
         }
     }
 
@@ -651,4 +651,5 @@ public class MongoDBMonitor extends AManagedMonitor {
     public static String getImplementationVersion() {
         return MongoDBMonitor.class.getPackage().getImplementationTitle();
     }
+
 }
