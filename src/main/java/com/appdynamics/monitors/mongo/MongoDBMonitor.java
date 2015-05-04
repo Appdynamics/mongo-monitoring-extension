@@ -193,7 +193,7 @@ public class MongoDBMonitor extends AManagedMonitor {
                         }
                     }
                 } catch (DocumentException e) {
-                    logger.error("Cannot read '" + file.getAbsolutePath() + "'. Monitor is running without additional credentials");
+                    logger.error("Cannot read '" + file.getAbsolutePath() + "'. Monitor is running without additional credentials", e);
                 }
             } else{
                 logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials." +
@@ -231,7 +231,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
             }
         }catch (Exception e){
-            logger.error("Error while resolving the Install Dir",e);
+            logger.error("Error while resolving the Install Dir ", e);
         }
         if(installDir!=null){
             logger.info("Install dir resolved to "+installDir.getAbsolutePath());

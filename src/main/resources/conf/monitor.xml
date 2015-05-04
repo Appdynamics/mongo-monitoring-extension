@@ -1,6 +1,7 @@
 <monitor>
         <name>Mongo DBMonitor</name>
         <type>managed</type>
+        <enabled>true</enabled>
         <description>Mongo DB server monitor</description>
         <monitor-configuration></monitor-configuration>
         <monitor-run-task>
@@ -29,7 +30,7 @@
                         <argument name="properties-path" is-required="false" default-value="monitors/MongoMonitor/properties.xml" />
                 </task-arguments>
                 <java-task>
-                    <classpath>mongo-monitoring-extension.jar;lib/gson-2.2.2.jar;lib/mongo-java-driver-2.11.3.jar;lib/dom4j-1.6.1.jar;lib/commons-net-3.3.jar;lib/bcpkix-jdk15on-1.50.jar;lib/bcprov-jdk15on-1.50.jar;lib/appd-exts-commons-1.1.2.jar;lib/slf4j-log4j12-1.7.5.jar;lib/slf4j-api-1.7.5.jar;lib/guava-11.0.2.jar</classpath>
+                    <classpath>mongo-monitoring-extension.jar</classpath>
                         <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
                 </java-task>
         </monitor-run-task>
