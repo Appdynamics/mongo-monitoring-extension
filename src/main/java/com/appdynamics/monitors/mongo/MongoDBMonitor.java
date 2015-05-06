@@ -16,27 +16,16 @@
 
 package com.appdynamics.monitors.mongo;
 
-import java.io.File;
-import java.io.FileReader;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.UnknownHostException;
-import java.security.CodeSource;
-import java.security.KeyStore;
-import java.security.ProtectionDomain;
-import java.security.Security;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.naming.AuthenticationException;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-
+import com.appdynamics.extensions.crypto.CryptoUtil;
+import com.appdynamics.monitors.mongo.json.ServerStats;
+import com.google.gson.Gson;
+import com.mongodb.*;
+import com.singularity.ee.agent.systemagent.SystemAgent;
+import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
+import com.singularity.ee.agent.systemagent.api.MetricWriter;
+import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
+import com.singularity.ee.agent.systemagent.api.TaskOutput;
+import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.commons.net.util.SSLContextUtils;
 import org.apache.commons.net.util.TrustManagerUtils;
 import org.apache.log4j.Logger;
@@ -50,22 +39,21 @@ import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
-import com.appdynamics.extensions.crypto.CryptoUtil;
-import com.appdynamics.monitors.mongo.json.ServerStats;
-import com.google.gson.Gson;
-import com.mongodb.CommandResult;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
-import com.singularity.ee.agent.systemagent.SystemAgent;
-import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
-import com.singularity.ee.agent.systemagent.api.MetricWriter;
-import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
-import com.singularity.ee.agent.systemagent.api.TaskOutput;
-import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
+import javax.naming.AuthenticationException;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import java.io.File;
+import java.io.FileReader;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.net.UnknownHostException;
+import java.security.CodeSource;
+import java.security.KeyStore;
+import java.security.ProtectionDomain;
+import java.security.Security;
+import java.security.cert.X509Certificate;
+import java.util.*;
 
 public class MongoDBMonitor extends AManagedMonitor {
     private static final String ENCRYPTION_KEY = "encryption-key";
@@ -385,72 +373,79 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param metricName  Name of the Metric
      * @param metricValue Value of the Metric
      */
-    public void printMetric(String metricName, double metricValue) {
-        try {
-            MetricWriter metricWriter = getMetricWriter(metricName,
-                    MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                    MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-                    MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-            );
-
-            metricWriter.printMetric(String.valueOf((long) metricValue));
-        } catch (Exception e) {
-            logger.error("Exception while reporting metric to Controller", e);
+    public void printMetric(String metricName, Number metricValue) {
+        if(metricValue != null) {
+            try {
+                MetricWriter metricWriter = getMetricWriter(metricName,
+                        MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+                );
+                metricWriter.printMetric(String.valueOf(Math.round(metricValue.doubleValue())));
+            } catch (Exception e) {
+                logger.error(e);
+            }
+        } else {
+            logger.warn("Metric " + metricName + "is null");
         }
     }
 
     private void printServerStats(ServerStats serverStats) {
-        printUpTimeStats(serverStats);
-        printGlobalLocksStats(serverStats);
-        printMemoryStats(serverStats);
-        printConnectionStats(serverStats);
-        printIndexCounterStats(serverStats);
-        printBackgroundFlushingStats(serverStats);
-        printNetworkStats(serverStats);
-        printOperationStats(serverStats);
-        printAssertStats(serverStats);
+        if(serverStats != null) {
+            printUpTimeStats(serverStats);
+            printGlobalLocksStats(serverStats);
+            printMemoryStats(serverStats);
+            printConnectionStats(serverStats);
+            printIndexCounterStats(serverStats);
+            printBackgroundFlushingStats(serverStats);
+            printNetworkStats(serverStats);
+            printOperationStats(serverStats);
+            printAssertStats(serverStats);
+        }
     }
 
     private void printDBStats(DBStats dbStats) {
     	if(dbStats != null) {
     		String dbStatsPath = getDBStatsMetricPrefix(dbStats.getDb());
 
-            printMetric(dbStatsPath + "collections", dbStats.getCollections().doubleValue());
-            printMetric(dbStatsPath + "objects", dbStats.getObjects().doubleValue());
-            printMetric(dbStatsPath + "avgObjSize", dbStats.getAvgObjSize().doubleValue());
-            printMetric(dbStatsPath + "dataSize", dbStats.getDataSize().doubleValue());
-            printMetric(dbStatsPath + "storageSize", dbStats.getStorageSize().doubleValue());
-            printMetric(dbStatsPath + "numExtents", dbStats.getNumExtents().doubleValue());
-            printMetric(dbStatsPath + "indexes", dbStats.getIndexes().doubleValue());
-            printMetric(dbStatsPath + "indexSize", dbStats.getIndexSize().doubleValue());
-            printMetric(dbStatsPath + "fileSize", dbStats.getFileSize().doubleValue());
-            printMetric(dbStatsPath + "nsSizeMB", dbStats.getNsSizeMB().doubleValue());
+            printMetric(dbStatsPath + "collections", dbStats.getCollections());
+            printMetric(dbStatsPath + "objects", dbStats.getObjects());
+            printMetric(dbStatsPath + "avgObjSize", dbStats.getAvgObjSize());
+            printMetric(dbStatsPath + "dataSize", dbStats.getDataSize());
+            printMetric(dbStatsPath + "storageSize", dbStats.getStorageSize());
+            printMetric(dbStatsPath + "numExtents", dbStats.getNumExtents());
+            printMetric(dbStatsPath + "indexes", dbStats.getIndexes());
+            printMetric(dbStatsPath + "indexSize", dbStats.getIndexSize());
+            printMetric(dbStatsPath + "fileSize", dbStats.getFileSize());
+            printMetric(dbStatsPath + "nsSizeMB", dbStats.getNsSizeMB());
     	}
     }
 
     private void printCollectionStats(String dbName, CollectionStats collectionStats) {
+        if(collectionStats != null) {
+            String collectionStatsPath = getCollectionStatsMetricPrefix(dbName, collectionStats.getNs());
 
-        String collectionStatsPath = getCollectionStatsMetricPrefix(dbName, collectionStats.getNs());
+            printMetric(collectionStatsPath + "count", collectionStats.getCount());
+            printMetric(collectionStatsPath + "size", collectionStats.getSize());
+            printMetric(collectionStatsPath + "storageSize", collectionStats.getStorageSize());
+            printMetric(collectionStatsPath + "numExtents", collectionStats.getNumExtents());
+            printMetric(collectionStatsPath + "nindexes", collectionStats.getNindexes());
+            printMetric(collectionStatsPath + "lastExtentSize", collectionStats.getLastExtentSize());
+            printMetric(collectionStatsPath + "paddingFactor", collectionStats.getPaddingFactor());
+            printMetric(collectionStatsPath + "systemFlags", collectionStats.getSystemFlags());
+            printMetric(collectionStatsPath + "userFlags", collectionStats.getUserFlags());
+            printMetric(collectionStatsPath + "totalIndexSize", collectionStats.getTotalIndexSize());
 
-        printMetric(collectionStatsPath + "count", collectionStats.getCount().doubleValue());
-        printMetric(collectionStatsPath + "size", collectionStats.getSize().doubleValue());
-        printMetric(collectionStatsPath + "storageSize", collectionStats.getStorageSize().doubleValue());
-        printMetric(collectionStatsPath + "numExtents", collectionStats.getNumExtents().doubleValue());
-        printMetric(collectionStatsPath + "nindexes", collectionStats.getNindexes().doubleValue());
-        printMetric(collectionStatsPath + "lastExtentSize", collectionStats.getLastExtentSize().doubleValue());
-        printMetric(collectionStatsPath + "paddingFactor", collectionStats.getPaddingFactor().doubleValue());
-        printMetric(collectionStatsPath + "systemFlags", collectionStats.getSystemFlags().doubleValue());
-        printMetric(collectionStatsPath + "userFlags", collectionStats.getUserFlags().doubleValue());
-        printMetric(collectionStatsPath + "totalIndexSize", collectionStats.getTotalIndexSize().doubleValue());
-
-        for (Map.Entry<String, Number> index : collectionStats.getIndexSizes().entrySet()) {
-            printMetric(collectionStatsPath + "Index Size|" + index.getKey(), index.getValue().doubleValue());
+            for (Map.Entry<String, Number> index : collectionStats.getIndexSizes().entrySet()) {
+                printMetric(collectionStatsPath + "Index Size|" + index.getKey(), index.getValue());
+            }
+        } else {
+            logger.info("CollectionStats for db " + dbName + "found to be NULL");
         }
-
     }
 
     private void printUpTimeStats(ServerStats serverStats) {
-        printMetric(getServerStatsMetricPrefix() + "UP Time (Milliseconds)", serverStats.getUptimeMillis().doubleValue()
+        printMetric(getServerStatsMetricPrefix() + "UP Time (Milliseconds)", serverStats.getUptimeMillis()
         );
     }
 
@@ -460,13 +455,12 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printConnectionStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Connections|Current", serverStats.getConnections().getCurrent().doubleValue());
+        if(serverStats.getConnections() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Connections|Current", serverStats.getConnections().getCurrent());
 
-            printMetric(getServerStatsMetricPrefix() + "Connections|Available", serverStats.getConnections().getAvailable().doubleValue());
-
-        } catch (Exception e) {
-            logger.warn("No information on Connections available", e);
+            printMetric(getServerStatsMetricPrefix() + "Connections|Available", serverStats.getConnections().getAvailable());
+        } else {
+            logger.warn("No information on Connections available in db.serverStatus()");
         }
     }
 
@@ -476,19 +470,18 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printMemoryStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Memory|Bits", serverStats.getMem().getBits().doubleValue());
+        if(serverStats.getMem() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Memory|Bits", serverStats.getMem().getBits());
 
-            printMetric(getServerStatsMetricPrefix() + "Memory|Resident", serverStats.getMem().getResident().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Memory|Resident", serverStats.getMem().getResident());
 
-            printMetric(getServerStatsMetricPrefix() + "Memory|Virtual", serverStats.getMem().getVirtual().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Memory|Virtual", serverStats.getMem().getVirtual());
 
-            printMetric(getServerStatsMetricPrefix() + "Memory|Mapped", serverStats.getMem().getMapped().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Memory|Mapped", serverStats.getMem().getMapped());
 
-            printMetric(getServerStatsMetricPrefix() + "Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal().doubleValue());
-
-        } catch (Exception e) {
-            logger.warn("No information on Memory available", e);
+            printMetric(getServerStatsMetricPrefix() + "Memory|Mapped With Journal", serverStats.getMem().getMappedWithJournal());
+        } else {
+            logger.warn("No information on Memory available in db.serverStatus()");
         }
     }
 
@@ -498,23 +491,22 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats Server stats
      */
     public void printGlobalLocksStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime().doubleValue());
+        if(serverStats.getGlobalLock() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime());
 
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal());
 
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Readers", serverStats.getGlobalLock().getCurrentQueue().getReaders().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Readers", serverStats.getGlobalLock().getCurrentQueue().getReaders());
 
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Writers", serverStats.getGlobalLock().getCurrentQueue().getWriters().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Writers", serverStats.getGlobalLock().getCurrentQueue().getWriters());
 
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Total", serverStats.getGlobalLock().getActiveClients().getTotal().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Total", serverStats.getGlobalLock().getActiveClients().getTotal());
 
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Readers", serverStats.getGlobalLock().getActiveClients().getReaders().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Readers", serverStats.getGlobalLock().getActiveClients().getReaders());
 
-            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters().doubleValue());
-
-        } catch (Exception e) {
-            logger.warn("No information on Global Lock available", e);
+            printMetric(getServerStatsMetricPrefix() + "Global Lock|Active Clients|Writers", serverStats.getGlobalLock().getActiveClients().getWriters());
+        } else {
+            logger.warn("No information on Global Lock available in db.serverStatus()");
         }
     }
 
@@ -524,17 +516,16 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printIndexCounterStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getAccesses().doubleValue());
+        if(serverStats.getIndexCounters() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getAccesses());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getHits().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getHits());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getMisses().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getMisses());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getResets().doubleValue());
-
-        } catch (Exception e) {
-            logger.warn("No information on Index Counter available", e);
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getResets());
+        } else {
+            logger.warn("No information on Index Counter available in db.serverStatus()");
         }
     }
 
@@ -544,16 +535,16 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printBackgroundFlushingStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes().doubleValue());
+        if(serverStats.getBackgroundFlushing() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes());
 
-            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms());
 
-            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Average (ms)", serverStats.getBackgroundFlushing().getAverage_ms());
 
-            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms().doubleValue());
-        } catch (Exception e) {
-            logger.warn("No information on Background Flushing available", e);
+            printMetric(getServerStatsMetricPrefix() + "Background Flushing|Last (ms)", serverStats.getBackgroundFlushing().getLast_ms());
+        } else {
+            logger.warn("No information on Background Flushing available in db.serverStatus()");
         }
     }
 
@@ -563,14 +554,14 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printNetworkStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Network|Bytes In", serverStats.getNetwork().getBytesIn().doubleValue());
+        if(serverStats.getNetwork() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Network|Bytes In", serverStats.getNetwork().getBytesIn());
 
-            printMetric(getServerStatsMetricPrefix() + "Network|Bytes Out", serverStats.getNetwork().getBytesOut().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Network|Bytes Out", serverStats.getNetwork().getBytesOut());
 
-            printMetric(getServerStatsMetricPrefix() + "Network|Number Requests", serverStats.getNetwork().getBytesIn().doubleValue());
-        } catch (Exception e) {
-            logger.warn("No information on Network available", e);
+            printMetric(getServerStatsMetricPrefix() + "Network|Number Requests", serverStats.getNetwork().getBytesIn());
+        } else {
+            logger.warn("No information on Network available in db.serverStatus()");
         }
     }
 
@@ -580,20 +571,20 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printOperationStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Operations|Insert", serverStats.getOpcounters().getInsert().doubleValue());
+        if(serverStats.getOpcounters() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Operations|Insert", serverStats.getOpcounters().getInsert());
 
-            printMetric(getServerStatsMetricPrefix() + "Operations|Query", serverStats.getOpcounters().getQuery().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Operations|Query", serverStats.getOpcounters().getQuery());
 
-            printMetric(getServerStatsMetricPrefix() + "Operations|Update", serverStats.getOpcounters().getUpdate().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Operations|Update", serverStats.getOpcounters().getUpdate());
 
-            printMetric(getServerStatsMetricPrefix() + "Operations|Delete", serverStats.getOpcounters().getDelete().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Operations|Delete", serverStats.getOpcounters().getDelete());
 
-            printMetric(getServerStatsMetricPrefix() + "Operations|Get More", serverStats.getOpcounters().getGetmore().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Operations|Get More", serverStats.getOpcounters().getGetmore());
 
-            printMetric(getServerStatsMetricPrefix() + "Operations|Command", serverStats.getOpcounters().getCommand().doubleValue());
-        } catch (Exception e) {
-            logger.warn("No information on Operations available", e);
+            printMetric(getServerStatsMetricPrefix() + "Operations|Command", serverStats.getOpcounters().getCommand());
+        } else {
+            logger.warn("No information on Operations available in db.serverStatus()");
         }
     }
 
@@ -603,18 +594,24 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printAssertStats(ServerStats serverStats) {
-        try {
-            printMetric(getServerStatsMetricPrefix() + "Asserts|Regular", serverStats.getAsserts().getRegular().doubleValue());
+        if(serverStats.getAsserts() != null) {
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Regular", serverStats.getAsserts().getRegular());
 
-            printMetric(getServerStatsMetricPrefix() + "Asserts|Warning", serverStats.getAsserts().getWarning().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Warning", serverStats.getAsserts().getWarning());
 
-            printMetric(getServerStatsMetricPrefix() + "Asserts|Message", serverStats.getAsserts().getMsg().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Message", serverStats.getAsserts().getMsg());
 
-            printMetric(getServerStatsMetricPrefix() + "Asserts|User", serverStats.getAsserts().getWarning().doubleValue());
+            printMetric(getServerStatsMetricPrefix() + "Asserts|User", serverStats.getAsserts().getWarning());
 
-            printMetric(getServerStatsMetricPrefix() + "Asserts|Rollover", serverStats.getAsserts().getRollovers().doubleValue());
-        } catch (Exception e) {
-            logger.warn("No information on Asserts available", e);
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Warning", serverStats.getAsserts().getWarning());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Message", serverStats.getAsserts().getMsg());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|User", serverStats.getAsserts().getWarning());
+
+            printMetric(getServerStatsMetricPrefix() + "Asserts|Rollover", serverStats.getAsserts().getRollovers());
+        } else {
+            logger.warn("No information on Asserts available in db.serverStatus()");
         }
     }
 
