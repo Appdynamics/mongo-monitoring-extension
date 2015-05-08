@@ -150,7 +150,7 @@ To avoid setting the clear text password in the monitor.xml and properties.xml, 
 
 ##Metrics
 
-###	Server Stats
+###Server Stats
 
 <table><tbody>
 <tr>
@@ -164,7 +164,7 @@ To avoid setting the clear text password in the monitor.xml and properties.xml, 
 </tbody>
 </table>
 
-####Metric Category: Asserts
+#####Metric Category: Asserts
 
 <table><tbody>
 <tr>
@@ -194,7 +194,7 @@ To avoid setting the clear text password in the monitor.xml and properties.xml, 
 </tbody>
 </table>
 
-####Metric Category: Background Flushing 
+#####Metric Category: Background Flushing 
 
 <table><tbody>
 <tr>
@@ -220,7 +220,7 @@ To avoid setting the clear text password in the monitor.xml and properties.xml, 
 </tbody>
 </table>
 
-####Metric Category: Connections
+#####Metric Category: Connections
 
 <table><tbody>
 <tr>
@@ -242,7 +242,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-####Metric Category: Global Lock
+#####Metric Category: Global Lock
  
  <table>
  <tbody>
@@ -257,7 +257,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
  
-#####Active Clients
+######Active Clients
  <table><tbody>
  <tr>
  <th align="left"> Metric Name </th>
@@ -278,7 +278,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-#####Current Queue
+######Current Queue
 
 <table><tbody>
 <tr>
@@ -300,7 +300,34 @@ Consider this value in combination with the value of Current to understand the c
 </tbody>
 </table>
 
-####Metric Category: Memory
+#####Metric Category: Index Counter
+ 
+ <table>
+ <tbody>
+ <tr>
+ <th align="left"> Metric Name </th>
+ <th align="left"> Description </th>
+ </tr>
+ <tr>
+  <th align="left"> Accesses </th>
+  <th align="left"> </th>
+  </tr>
+ <tr>
+  <th align="left"> Hits </th>
+  <th align="left"> </th>
+  </tr>
+ <tr>
+  <th align="left"> Misses </th>
+  <th align="left"> </th>
+  </tr>
+<tr>
+  <th align="left"> Resets </th>
+  <th align="left"> </th>
+  </tr>
+ </tbody>
+ </table>
+
+#####Metric Category: Memory
 
 <table><tbody>
 <tr>
@@ -331,7 +358,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-####Metric Category: Network
+#####Metric Category: Network
 <table><tbody>
 <tr>
 <th align="left"> Metric Name </th>
@@ -352,7 +379,7 @@ Consider this value in combination with the value of Current to understand the c
 </tbody>
 </table>
 
-####Metric Category: Operations
+#####Metric Category: Operations
  <table><tbody>
  <tr>
  <th align="left"> Metric Name </th>
@@ -385,9 +412,9 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-###	DB Stats
+###DB Stats
+#####<DB Name>
 
-####<DB Name>
 <table><tbody>
  <tr>
  <th align="left"> Metric Name </th>
@@ -437,8 +464,9 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-####Metric Category: Collection Stats
+#####Metric Category: Collection Stats
 #####<collection name>
+
 <table><tbody>
  <tr>
  <th align="left"> Metric Name </th>

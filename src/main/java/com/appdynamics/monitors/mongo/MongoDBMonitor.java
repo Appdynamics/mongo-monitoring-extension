@@ -393,14 +393,14 @@ public class MongoDBMonitor extends AManagedMonitor {
     private void printServerStats(ServerStats serverStats) {
         if(serverStats != null) {
             printUpTimeStats(serverStats);
-            printGlobalLocksStats(serverStats);
-            printMemoryStats(serverStats);
-            printConnectionStats(serverStats);
-            printIndexCounterStats(serverStats);
+            printAssertStats(serverStats);
             printBackgroundFlushingStats(serverStats);
+            printConnectionStats(serverStats);
+            printGlobalLocksStats(serverStats);
+            printIndexCounterStats(serverStats);
             printNetworkStats(serverStats);
             printOperationStats(serverStats);
-            printAssertStats(serverStats);
+            printMemoryStats(serverStats);
         }
     }
 
@@ -517,13 +517,13 @@ public class MongoDBMonitor extends AManagedMonitor {
      */
     public void printIndexCounterStats(ServerStats serverStats) {
         if(serverStats.getIndexCounters() != null) {
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Accesses", serverStats.getIndexCounters().getAccesses());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|Accesses", serverStats.getIndexCounters().getAccesses());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Hits", serverStats.getIndexCounters().getHits());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|Hits", serverStats.getIndexCounters().getHits());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Misses", serverStats.getIndexCounters().getMisses());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|Misses", serverStats.getIndexCounters().getMisses());
 
-            printMetric(getServerStatsMetricPrefix() + "Index Counter|B-Tree|Resets", serverStats.getIndexCounters().getResets());
+            printMetric(getServerStatsMetricPrefix() + "Index Counter|Resets", serverStats.getIndexCounters().getResets());
         } else {
             logger.warn("No information on Index Counter available in db.serverStatus()");
         }

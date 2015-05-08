@@ -18,6 +18,15 @@
 package com.appdynamics.monitors.mongo.json;
 
 public class ServerStats{
+    private String host;
+    private String version;
+    private String process;
+    private Number pid;
+    private Number uptime;
+    private Number uptimeMillis;
+    private Number uptimeEstimate;
+    private LocalTime localTime;
+
    	private Asserts asserts;
    	private BackgroundFlushing backgroundFlushing;
    	private Connections connections;
@@ -25,21 +34,17 @@ public class ServerStats{
    	private Dur dur;
    	private Extra_info extra_info;
    	private GlobalLock globalLock;
-   	private String host;
    	private IndexCounters indexCounters;
-   	private LocalTime localTime;
+
+    private Network network;
+    private Opcounters opcounters;
+    private boolean writeBacksQueued;
    	private Mem mem;
-   	private Network network;
+
    	private Number ok;
-   	private Opcounters opcounters;
-   	private Number pid;
-   	private String process;
+
    	private String serverUsed;
-   	private Number uptime;
-   	private Number uptimeEstimate;
-   	private Number uptimeMillis;
-   	private String version;
-   	private boolean writeBacksQueued;
+
 
  	public Asserts getAsserts(){
 		return this.asserts;
