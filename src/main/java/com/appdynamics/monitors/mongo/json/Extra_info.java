@@ -19,6 +19,7 @@ package com.appdynamics.monitors.mongo.json;
 
 public class Extra_info{
    	private String note;
+    private Number heap_usage_bytes;
    	private Number page_faults;
 
  	public String getNote(){
@@ -33,4 +34,12 @@ public class Extra_info{
 	public void setPage_faults(Number page_faults){
 		this.page_faults = page_faults;
 	}
+
+    public Number getHeap_usage_bytes() {
+        return heap_usage_bytes;
+    }
+
+    public void setHeap_usage_bytes(Number heap_usage_bytes) {
+        this.heap_usage_bytes = heap_usage_bytes;
+    }
 }

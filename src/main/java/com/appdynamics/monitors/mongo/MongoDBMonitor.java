@@ -98,9 +98,9 @@ public class MongoDBMonitor extends AManagedMonitor {
     	logger.info("Starting Mongo Monitoring Task");
         try {
             MongoCredential adminCredentials = getAdminCredentials(params);
-            
+
             MongoClientOptions options = getMongoClientOptions(params);
-            
+
             DB adminDB = connectToAdminDB(adminCredentials, options);
 
             ServerStats serverStats = getServerStats(adminDB);
@@ -396,10 +396,14 @@ public class MongoDBMonitor extends AManagedMonitor {
             printAssertStats(serverStats);
             printBackgroundFlushingStats(serverStats);
             printConnectionStats(serverStats);
+            printCursorsStats(serverStats);
+            printDurStats(serverStats);
+            printExtraInfoStats(serverStats);
             printGlobalLocksStats(serverStats);
             printIndexCounterStats(serverStats);
             printNetworkStats(serverStats);
             printOperationStats(serverStats);
+            printOpCountersReplStats(serverStats);
             printMemoryStats(serverStats);
         }
     }
@@ -447,6 +451,64 @@ public class MongoDBMonitor extends AManagedMonitor {
     private void printUpTimeStats(ServerStats serverStats) {
         printMetric(getServerStatsMetricPrefix() + "UP Time (Milliseconds)", serverStats.getUptimeMillis()
         );
+    }
+
+    private void printOpCountersReplStats(ServerStats serverStats) {
+        if(serverStats.getOpcountersRepl() != null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(getServerStatsMetricPrefix()).append("OpCountersRepl |");
+            printMetric(sb.toString() + "Insert", serverStats.getOpcountersRepl().getInsert());
+            printMetric(sb.toString() + "Query", serverStats.getOpcountersRepl().getQuery());
+            printMetric(sb.toString() + "Update", serverStats.getOpcountersRepl().getUpdate());
+            printMetric(sb.toString() + "Delete", serverStats.getOpcountersRepl().getDelete());
+            printMetric(sb.toString() + "GetMore", serverStats.getOpcountersRepl().getGetmore());
+            printMetric(sb.toString() + "Command", serverStats.getOpcountersRepl().getCommand());
+        } else {
+            logger.warn("No information on OpCountersRepl available in db.serverStatus()");
+        }
+
+    }
+
+    private void printExtraInfoStats(ServerStats serverStats) {
+        if(serverStats.getExtra_info() != null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(getServerStatsMetricPrefix()).append("ExtraInfo |");
+            printMetric(sb.toString() + "Heap Usage Bytes", serverStats.getExtra_info().getHeap_usage_bytes());
+            printMetric(sb.toString() + "Page Faults", serverStats.getExtra_info().getPage_faults());
+        } else {
+            logger.warn("No information on ExtraInfo available in db.serverStatus()");
+        }
+    }
+
+    private void printDurStats(ServerStats serverStats) {
+        if(serverStats.getDur() != null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(getServerStatsMetricPrefix()).append("Dur |");
+            printMetric(sb.toString() + "Commits", serverStats.getDur().getCommits());
+            printMetric(sb.toString() + "Journaled MB", serverStats.getDur().getJournaledMB());
+            printMetric(sb.toString() + "WriteToDataFilesMB", serverStats.getDur().getWriteToDataFilesMB());
+            printMetric(sb.toString() + "Compression" , serverStats.getDur().getCompression());
+            printMetric(sb.toString() + "Commits In Write Lock", serverStats.getDur().getCommitsInWriteLock());
+            printMetric(sb.toString() + "Early Commits", serverStats.getDur().getEarlyCommits());
+
+        } else {
+            logger.warn("No information on Dur available in db.serverStatus()");
+        }
+    }
+
+    private void printCursorsStats(ServerStats serverStats) {
+        if(serverStats.getCursors() != null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(getServerStatsMetricPrefix()).append("Cursors |");
+            printMetric(sb.toString() + "clientCursors_size", serverStats.getCursors().getClientCursors_size());
+            printMetric(sb.toString() + "totalOpen", serverStats.getCursors().getTotalOpen());
+            printMetric(sb.toString() + "pinned", serverStats.getCursors().getPinned());
+            printMetric(sb.toString() + "totalNoTimeout", serverStats.getCursors().getTotalNoTimeout());
+            printMetric(sb.toString() + "timedOut", serverStats.getCursors().getTimedOut());
+
+        } else {
+            logger.warn("No information on Cursors available in db.serverStatus()");
+        }
     }
 
     /**

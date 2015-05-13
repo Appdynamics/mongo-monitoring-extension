@@ -251,8 +251,8 @@ Consider this value in combination with the value of Current to understand the c
  <th align="left"> Description </th>
  </tr>
  <tr>
-  <th align="left"> Total Time </th>
-  <th align="left"> The total time since the globalLock was started and created </th>
+  <td align="left"> Total Time </td>
+  <td align="left"> The total time since the globalLock was started and created </td>
   </tr>
  </tbody>
  </table>
@@ -309,20 +309,20 @@ Consider this value in combination with the value of Current to understand the c
  <th align="left"> Description </th>
  </tr>
  <tr>
-  <th align="left"> Accesses </th>
-  <th align="left"> </th>
+  <td align="left"> Accesses </td>
+  <td align="left"> </td>
   </tr>
  <tr>
-  <th align="left"> Hits </th>
-  <th align="left"> </th>
+  <td align="left"> Hits </td>
+  <td align="left"> </td>
   </tr>
  <tr>
-  <th align="left"> Misses </th>
-  <th align="left"> </th>
+  <td align="left"> Misses </td>
+  <td align="left"> </td>
   </tr>
 <tr>
-  <th align="left"> Resets </th>
-  <th align="left"> </th>
+  <td align="left"> Resets </td>
+  <td align="left"> </td>
   </tr>
  </tbody>
  </table>

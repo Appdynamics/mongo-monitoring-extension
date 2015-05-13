@@ -38,6 +38,7 @@ public class ServerStats{
 
     private Network network;
     private Opcounters opcounters;
+    private OpcountersRepl opcountersRepl;
     private boolean writeBacksQueued;
    	private Mem mem;
 
@@ -178,4 +179,12 @@ public class ServerStats{
 	public void setWriteBacksQueued(boolean writeBacksQueued){
 		this.writeBacksQueued = writeBacksQueued;
 	}
+
+    public OpcountersRepl getOpcountersRepl() {
+        return opcountersRepl;
+    }
+
+    public void setOpcountersRepl(OpcountersRepl opcountersRepl) {
+        this.opcountersRepl = opcountersRepl;
+    }
 }

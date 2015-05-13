@@ -19,8 +19,10 @@ package com.appdynamics.monitors.mongo.json;
 
 public class Cursors{
    	private Number clientCursors_size;
+    private Number totalOpen;
+    private Number pinned;
+    private Number totalNoTimeout;
    	private Number timedOut;
-   	private Number totalOpen;
 
  	public Number getClientCursors_size(){
 		return this.clientCursors_size;
@@ -40,4 +42,20 @@ public class Cursors{
 	public void setTotalOpen(Number totalOpen){
 		this.totalOpen = totalOpen;
 	}
+
+    public Number getPinned() {
+        return pinned;
+    }
+
+    public void setPinned(Number pinned) {
+        this.pinned = pinned;
+    }
+
+    public Number getTotalNoTimeout() {
+        return totalNoTimeout;
+    }
+
+    public void setTotalNoTimeout(Number totalNoTimeout) {
+        this.totalNoTimeout = totalNoTimeout;
+    }
 }

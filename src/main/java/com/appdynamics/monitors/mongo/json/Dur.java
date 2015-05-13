@@ -19,12 +19,12 @@ package com.appdynamics.monitors.mongo.json;
 
 public class Dur{
    	private Number commits;
+    private Number journaledMB;
+    private Number writeToDataFilesMB;
+    private Number compression;
    	private Number commitsInWriteLock;
-   	private Number compression;
    	private Number earlyCommits;
-   	private Number journaledMB;
    	private TimeMs timeMs;
-   	private Number writeToDataFilesMB;
 
  	public Number getCommits(){
 		return this.commits;
