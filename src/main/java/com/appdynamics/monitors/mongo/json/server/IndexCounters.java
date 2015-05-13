@@ -15,43 +15,52 @@
  */
 
 
-package com.appdynamics.monitors.mongo.json;
+package com.appdynamics.monitors.mongo.json.server;
 
-public class IndexCounters{
+public class IndexCounters {
     private Number accesses;
     private Number hits;
     private Number missRatio;
     private Number misses;
     private Number resets;
 
-    public Number getAccesses(){
+    public Number getAccesses() {
         return this.accesses;
     }
-    public void setAccesses(Number accesses){
+
+    public void setAccesses(Number accesses) {
         this.accesses = accesses;
     }
-    public Number getHits(){
+
+    public Number getHits() {
         return this.hits;
     }
-    public void setHits(Number hits){
+
+    public void setHits(Number hits) {
         this.hits = hits;
     }
-    public Number getMissRatio(){
+
+    public Number getMissRatio() {
         return this.missRatio;
     }
-    public void setMissRatio(Number missRatio){
+
+    public void setMissRatio(Number missRatio) {
         this.missRatio = missRatio;
     }
-    public Number getMisses(){
+
+    public Number getMisses() {
         return this.misses;
     }
-    public void setMisses(Number misses){
+
+    public void setMisses(Number misses) {
         this.misses = misses;
     }
-    public Number getResets(){
+
+    public Number getResets() {
         return this.resets;
     }
-    public void setResets(Number resets){
+
+    public void setResets(Number resets) {
         this.resets = resets;
     }
 }

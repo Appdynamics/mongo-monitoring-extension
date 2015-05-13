@@ -1,4 +1,4 @@
-package com.appdynamics.monitors.mongo.json;
+package com.appdynamics.monitors.mongo.json.server;
 
 /**
  * Created by balakrishnav on 13/5/15.

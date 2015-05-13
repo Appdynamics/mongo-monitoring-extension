@@ -2,8 +2,9 @@
 
 ##Use Case
 The MongoDB custom monitor captures statistics from the MongoDB server and displays them in the AppDynamics Metric Browser.
-
 This extension works only with the standalone machine agent.
+
+To use with Replica Sets, you will need to deploy one copy of extension per host being monitored.
 
 Metrics include:
 
@@ -26,7 +27,7 @@ Metrics include:
 2. Download the file MongoMonitor-[version].zip found in the 'target' directory into \<machineagent install dir\>/monitors/
 3. Unzip the downloaded file
 4. In the newly created directory "MongoMonitor", edit the monitor.xml configuring the parameters specified below.
-5. If there are additional DB to be monitored, add the credentials to properties.xml
+5. If there are additional DB's to be monitored, add the credentials to properties.xml
 5. Restart the machineagent
 6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
 
@@ -61,6 +62,14 @@ Metrics include:
 <td class='confluenceTd'> pem-file </td>
 <td class='confluenceTd'> Path to pem-file with which MongoDB is started (monitors/MongoMonitor/mongodb.pem) </td>
 </tr>
+<tr>
+<td class='confluenceTd'> properties-path </td>
+<td class='confluenceTd'> Path to properties.xml where additional db's to be monitored can be specified </td>
+</tr>
+<tr>
+<td class='confluenceTd'> metricPathPrefix </td>
+<td class='confluenceTd'> Prefix to be looked in AppDynamics Metric Browser, use different prefixes to indiviudal servers to avoid conflict in metric path </td>
+</tr>
 </tbody>
 </table>
 
@@ -93,6 +102,7 @@ Metrics include:
                                 Additional MongoDB credentials can be placed in properties.xml
                         -->
                         <argument name="properties-path" is-required="false" default-value="monitors/MongoMonitor/properties.xml" />
+                        <argument name="metricPathPrefix" is-required="true" default-value="Custom Metrics|Mongo Server|" />
                 </task-arguments>
                 <java-task>
                     <classpath>mongo-monitoring-extension.jar</classpath>

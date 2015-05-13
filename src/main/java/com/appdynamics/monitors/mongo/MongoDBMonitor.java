@@ -17,7 +17,9 @@
 package com.appdynamics.monitors.mongo;
 
 import com.appdynamics.extensions.crypto.CryptoUtil;
-import com.appdynamics.monitors.mongo.json.ServerStats;
+import com.appdynamics.monitors.mongo.json.db.CollectionStats;
+import com.appdynamics.monitors.mongo.json.db.DBStats;
+import com.appdynamics.monitors.mongo.json.server.ServerStats;
 import com.google.gson.Gson;
 import com.mongodb.*;
 import com.singularity.ee.agent.systemagent.SystemAgent;
@@ -56,13 +58,8 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 
 public class MongoDBMonitor extends AManagedMonitor {
-    private static final String ENCRYPTION_KEY = "encryption-key";
 
-	private static final String PASSWORD_ENCRYPTED = "password-encrypted";
-
-	private static String encryptionKey;
-
-	private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
+    private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
 
     private static final String ARG_HOST = "host";
     private static final String ARG_PORT = "port";
@@ -70,12 +67,16 @@ public class MongoDBMonitor extends AManagedMonitor {
     private static final String ARG_PASS = "password";
     private static final String USE_SSL = "use-ssl";
     private static final String PEM_FILE_PATH = "pem-file";
-    private static final String ARG_DB   = "db";   
+    private static final String ARG_DB = "db";
     private static final String ADMIN_DB = "admin";
     private static final String ARG_XML_PATH = "properties-path";
-    private static final String metricPathPrefix = "Custom Metrics|Mongo Server|";
+    private static final String ENCRYPTION_KEY = "encryption-key";
+    private static final String PASSWORD_ENCRYPTED = "password-encrypted";
     private static final String OK_RESPONSE = "1.0";
+    public static final String METRIC_SEPARATOR = "|";
 
+    private static String encryptionKey;
+    private String metricPathPrefix;
     private MongoClient mongoClient;
     private String host;
     private String port;
@@ -95,64 +96,67 @@ public class MongoDBMonitor extends AManagedMonitor {
      */
     public TaskOutput execute(Map<String, String> params, TaskExecutionContext arg1)
             throws TaskExecutionException {
-    	logger.info("Starting Mongo Monitoring Task");
-        try {
-            MongoCredential adminCredentials = getAdminCredentials(params);
+        if (params != null) {
+            logger.info("Starting Mongo Monitoring Task");
+            metricPathPrefix = params.get("metricPathPrefix");
+            try {
+                MongoCredential adminCredentials = getAdminCredentials(params);
 
-            MongoClientOptions options = getMongoClientOptions(params);
+                MongoClientOptions options = getMongoClientOptions(params);
 
-            DB adminDB = connectToAdminDB(adminCredentials, options);
+                DB adminDB = connectToAdminDB(adminCredentials, options);
 
-            ServerStats serverStats = getServerStats(adminDB);
+                ServerStats serverStats = getServerStats(adminDB);
 
-            printServerStats(serverStats);
+                printServerStats(serverStats);
 
-            List<MongoCredential> additionalDBDetails = getAdditionalDBDetails(params);
+                List<MongoCredential> additionalDBDetails = getAdditionalDBDetails(params);
 
-            List<DB> additionalDBs = connect(additionalDBDetails);
+                List<DB> additionalDBs = connect(additionalDBDetails);
 
-            for (DB db : additionalDBs) {
-            	try {
-            		DBStats dbStats = getDBStats(db);
-                    printDBStats(dbStats);
+                for (DB db : additionalDBs) {
+                    try {
+                        DBStats dbStats = getDBStats(db);
+                        printDBStats(dbStats);
 
-                    Set<String> collectionNames = db.getCollectionNames();
-                    if (collectionNames != null && collectionNames.size() > 0) {
-                        for (String collectionName : collectionNames) {
-                            DBCollection collection = db.getCollection(collectionName);
-                            CommandResult collectionStatsResult = collection.getStats();
-                            if (collectionStatsResult != null && collectionStatsResult.ok()) {
-                                CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
-                                printCollectionStats(db.getName(), collectionStats);
-                            } else {
-                                String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName()+" failed";
-                                if (collectionStatsResult != null) {
-                                    errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                        Set<String> collectionNames = db.getCollectionNames();
+                        if (collectionNames != null && collectionNames.size() > 0) {
+                            for (String collectionName : collectionNames) {
+                                DBCollection collection = db.getCollection(collectionName);
+                                CommandResult collectionStatsResult = collection.getStats();
+                                if (collectionStatsResult != null && collectionStatsResult.ok()) {
+                                    CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
+                                    printCollectionStats(db.getName(), collectionStats);
+                                } else {
+                                    String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
+                                    if (collectionStatsResult != null) {
+                                        errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                                    }
+                                    logger.error(errorMessage);
                                 }
-                                logger.error(errorMessage);
                             }
                         }
+                    } catch (Exception e) {
+                        logger.error(e);
                     }
-				} catch (Exception e) {
-					logger.error(e);
-				}
-            }
-            logger.info("Mongo Monitoring Task completed successfully");
-            return new TaskOutput("Mongo DB Metric Upload Complete");
-        } catch (Exception e) {
-            logger.error("Exception", e);
-            return new TaskOutput("Mongo DB Metric Upload Failed." + e.toString());
-        } finally {
-            if (mongoClient != null) {
-                mongoClient.close();
+                }
+                logger.info("Mongo Monitoring Task completed successfully");
+                return new TaskOutput("Mongo DB Metric Upload Complete");
+            } catch (Exception e) {
+                logger.error("Exception", e);
+            } finally {
+                if (mongoClient != null) {
+                    mongoClient.close();
+                }
             }
         }
+        throw new TaskExecutionException("Mongo monitoring task completed with failures.");
     }
-    
+
     private DBStats getDBStats(DB db) {
         DBStats dbStats = new Gson().fromJson(db.command("dbStats").toString().trim(), DBStats.class);
         if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
-            logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= "+db.getName());
+            logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
         }
         return dbStats;
     }
@@ -164,7 +168,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
         if (isNotEmpty(xmlPath)) {
             File file = resolvePath(xmlPath);
-            if(file.exists()){
+            if (file.exists()) {
                 try {
                     SAXReader reader = new SAXReader();
                     Document doc = reader.read(file);
@@ -172,7 +176,7 @@ public class MongoDBMonitor extends AManagedMonitor {
 
                     for (Element credElem : (List<Element>) root.elements("credentials")) {
                         if (credElem.elementText(ARG_DB).length() > 0) {
-                        	String password = getDBPassword(credElem);
+                            String password = getDBPassword(credElem);
                             MongoCredential cred = MongoCredential.createMongoCRCredential(
                                     credElem.elementText(ARG_USER),
                                     credElem.elementText(ARG_DB),
@@ -183,7 +187,7 @@ public class MongoDBMonitor extends AManagedMonitor {
                 } catch (DocumentException e) {
                     logger.error("Cannot read '" + file.getAbsolutePath() + "'. Monitor is running without additional credentials", e);
                 }
-            } else{
+            } else {
                 logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials." +
                         "The absolute path is " + file.getAbsolutePath());
             }
@@ -193,62 +197,62 @@ public class MongoDBMonitor extends AManagedMonitor {
 
     private File resolvePath(String xmlPath) {
         File file = new File(xmlPath);
-        if(file.exists()){
+        if (file.exists()) {
             return file;
-        }else{
-            return new File(installDir,xmlPath);
+        } else {
+            return new File(installDir, xmlPath);
         }
     }
 
     private File resolveInstallDir() {
-        File installDir=null;
-        try{
+        File installDir = null;
+        try {
             ProtectionDomain pd = SystemAgent.class.getProtectionDomain();
-            if(pd!=null){
+            if (pd != null) {
                 CodeSource cs = pd.getCodeSource();
-                if(cs!=null){
+                if (cs != null) {
                     URL url = cs.getLocation();
-                    String path = URLDecoder.decode(url.getFile(),"UTF-8");
+                    String path = URLDecoder.decode(url.getFile(), "UTF-8");
                     File dir = new File(path).getParentFile();
-                    if(dir.exists()){
+                    if (dir.exists()) {
                         installDir = dir;
-                    } else{
-                        logger.error("Install dir resolved to "+dir.getAbsolutePath()+", however it doesnt exist.");
+                    } else {
+                        logger.error("Install dir resolved to " + dir.getAbsolutePath() + ", however it doesnt exist.");
                     }
                 }
 
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("Error while resolving the Install Dir ", e);
         }
-        if(installDir!=null){
-            logger.info("Install dir resolved to "+installDir.getAbsolutePath());
+        if (installDir != null) {
+            logger.info("Install dir resolved to " + installDir.getAbsolutePath());
             return installDir;
-        } else{
+        } else {
             File workDir = new File("");
-            logger.info("Failed to resolve install dir, returning current work dir"+workDir.getAbsolutePath());
+            logger.info("Failed to resolve install dir, returning current work dir" + workDir.getAbsolutePath());
             return workDir;
         }
     }
 
     private DB connectToAdminDB(MongoCredential adminCredentials, MongoClientOptions options) {
         try {
-        	if(options != null) {
-        		mongoClient = new MongoClient(new ServerAddress(host, Integer.parseInt(port)), options);
-        	} else {
-        		mongoClient = new MongoClient(host, Integer.parseInt(port));
-        	}
+            if (options != null) {
+                mongoClient = new MongoClient(new ServerAddress(host, Integer.parseInt(port)), options);
+            } else {
+                mongoClient = new MongoClient(host, Integer.parseInt(port));
+            }
         } catch (UnknownHostException e) {
-            String msg = String.format("Unable to connect to mongodb; host=%s, port=%s",host,port);
+            String msg = String.format("Unable to connect to mongodb; host=%s, port=%s", host, port);
             logger.error(msg, e);
             throw new RuntimeException(msg, e);
         }
 
         DB db = mongoClient.getDB(adminCredentials.getSource());
-        
+
         boolean authenticated = db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
-        if(!authenticated) {
-        	String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
+        if (!authenticated) {
+            String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
                     adminCredentials.getSource(), adminCredentials.getUserName());
             logger.error(msg);
             throw new RuntimeException(msg);
@@ -257,37 +261,37 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private MongoClientOptions getMongoClientOptions(Map<String, String> params) {
-    	String useSSL = params.get(USE_SSL);
-    	MongoClientOptions clientOpts = null;
-    	if(Boolean.valueOf(useSSL)) {
-    		String filePath = params.get(PEM_FILE_PATH);
-    		if(isNotEmpty(filePath)) {
-    			try {
-					clientOpts = new MongoClientOptions.Builder().socketFactory(getSocketFactoryFromPEM(filePath)).build();
-				} catch (Exception e) {
-					logger.error("Error establishing ssl socket factory", e);
-					throw new RuntimeException("Error establishing ssl socket factory");
-				}
-    		} else {
-    			String msg = "The argument "+ PEM_FILE_PATH + "is null or empty in monitor.xml";
-    			logger.error(msg);
-    			throw new RuntimeException(msg);
-    		}
-    	} else {
-    		logger.debug(USE_SSL + " value in monitor.xml set to " + useSSL);
-    	}
-		return clientOpts;
-	}
-    
+        String useSSL = params.get(USE_SSL);
+        MongoClientOptions clientOpts = null;
+        if (Boolean.valueOf(useSSL)) {
+            String filePath = params.get(PEM_FILE_PATH);
+            if (isNotEmpty(filePath)) {
+                try {
+                    clientOpts = new MongoClientOptions.Builder().socketFactory(getSocketFactoryFromPEM(filePath)).build();
+                } catch (Exception e) {
+                    logger.error("Error establishing ssl socket factory", e);
+                    throw new RuntimeException("Error establishing ssl socket factory");
+                }
+            } else {
+                String msg = "The argument " + PEM_FILE_PATH + "is null or empty in monitor.xml";
+                logger.error(msg);
+                throw new RuntimeException(msg);
+            }
+        } else {
+            logger.debug(USE_SSL + " value in monitor.xml set to " + useSSL);
+        }
+        return clientOpts;
+    }
+
     private SSLSocketFactory getSocketFactoryFromPEM(String filePath) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
-        
+
         PEMParser pemParser = new PEMParser(new FileReader(resolvePath(filePath)));
-		pemParser.readObject();
-		PemObject pemObject = pemParser.readPemObject();
-		pemParser.close();
-		
-		X509CertificateHolder holder = new X509CertificateHolder(pemObject.getContent());
+        pemParser.readObject();
+        PemObject pemObject = pemParser.readPemObject();
+        pemParser.close();
+
+        X509CertificateHolder holder = new X509CertificateHolder(pemObject.getContent());
         X509Certificate bc = new JcaX509CertificateConverter().setProvider("BC")
                 .getCertificate(holder);
 
@@ -297,40 +301,39 @@ public class MongoDBMonitor extends AManagedMonitor {
 
         TrustManager trustManager = TrustManagerUtils.getDefaultTrustManager(keyStore);
         SSLContext sslContext = SSLContextUtils.createSSLContext("TLS", null, trustManager);
-        
+
         return sslContext.getSocketFactory();
     }
 
-    private String getPassword(Map<String,String> taskArguments){
-        if(taskArguments.get(ARG_PASS) != null){
+    private String getPassword(Map<String, String> taskArguments) {
+        if (taskArguments.get(ARG_PASS) != null) {
             return taskArguments.get(ARG_PASS);
-        }
-        else if(taskArguments.containsKey(PASSWORD_ENCRYPTED)) {
-        	encryptionKey = taskArguments.get(ENCRYPTION_KEY);
-        	String encryptedPassword = taskArguments.get(PASSWORD_ENCRYPTED);
-        	return getDecryptedPassword(encryptionKey, encryptedPassword);
+        } else if (taskArguments.containsKey(PASSWORD_ENCRYPTED)) {
+            encryptionKey = taskArguments.get(ENCRYPTION_KEY);
+            String encryptedPassword = taskArguments.get(PASSWORD_ENCRYPTED);
+            return getDecryptedPassword(encryptionKey, encryptedPassword);
         }
         return "";
     }
-    
+
     private String getDBPassword(Element credElem) {
-    	if(credElem.elements().contains(ARG_PASS)) {
-    		return credElem.elementText(ARG_PASS);
-    	} else if (credElem.elements().contains(PASSWORD_ENCRYPTED)) {
-    		String encryptedPassword = credElem.elementText(PASSWORD_ENCRYPTED);
-    		return getDecryptedPassword(encryptionKey, encryptedPassword);
-    	}
-    	return "";
+        if (credElem.elements().contains(ARG_PASS)) {
+            return credElem.elementText(ARG_PASS);
+        } else if (credElem.elements().contains(PASSWORD_ENCRYPTED)) {
+            String encryptedPassword = credElem.elementText(PASSWORD_ENCRYPTED);
+            return getDecryptedPassword(encryptionKey, encryptedPassword);
+        }
+        return "";
     }
-    
+
     private String getDecryptedPassword(String encryptionKey, String encryptedPassword) {
-    	Map<String,String> argsForDecryption = new HashMap<String, String>();
+        Map<String, String> argsForDecryption = new HashMap<String, String>();
         argsForDecryption.put(PASSWORD_ENCRYPTED, encryptedPassword);
         argsForDecryption.put(ENCRYPTION_KEY, encryptionKey);
         return CryptoUtil.getPassword(argsForDecryption);
     }
-    
-	private MongoCredential getAdminCredentials(final Map<String, String> params) {
+
+    private MongoCredential getAdminCredentials(final Map<String, String> params) {
         MongoCredential cred;
         host = params.get(ARG_HOST);
         port = params.get(ARG_PORT);
@@ -374,7 +377,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param metricValue Value of the Metric
      */
     public void printMetric(String metricName, Number metricValue) {
-        if(metricValue != null) {
+        if (metricValue != null) {
             try {
                 MetricWriter metricWriter = getMetricWriter(metricName,
                         MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
@@ -391,7 +394,7 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printServerStats(ServerStats serverStats) {
-        if(serverStats != null) {
+        if (serverStats != null) {
             printUpTimeStats(serverStats);
             printAssertStats(serverStats);
             printBackgroundFlushingStats(serverStats);
@@ -409,8 +412,8 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printDBStats(DBStats dbStats) {
-    	if(dbStats != null) {
-    		String dbStatsPath = getDBStatsMetricPrefix(dbStats.getDb());
+        if (dbStats != null) {
+            String dbStatsPath = getDBStatsMetricPrefix(dbStats.getDb());
 
             printMetric(dbStatsPath + "collections", dbStats.getCollections());
             printMetric(dbStatsPath + "objects", dbStats.getObjects());
@@ -422,11 +425,11 @@ public class MongoDBMonitor extends AManagedMonitor {
             printMetric(dbStatsPath + "indexSize", dbStats.getIndexSize());
             printMetric(dbStatsPath + "fileSize", dbStats.getFileSize());
             printMetric(dbStatsPath + "nsSizeMB", dbStats.getNsSizeMB());
-    	}
+        }
     }
 
     private void printCollectionStats(String dbName, CollectionStats collectionStats) {
-        if(collectionStats != null) {
+        if (collectionStats != null) {
             String collectionStatsPath = getCollectionStatsMetricPrefix(dbName, collectionStats.getNs());
 
             printMetric(collectionStatsPath + "count", collectionStats.getCount());
@@ -454,9 +457,9 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printOpCountersReplStats(ServerStats serverStats) {
-        if(serverStats.getOpcountersRepl() != null) {
+        if (serverStats.getOpcountersRepl() != null) {
             StringBuilder sb = new StringBuilder();
-            sb.append(getServerStatsMetricPrefix()).append("OpCountersRepl |");
+            sb.append(getServerStatsMetricPrefix()).append("OpCountersRepl").append(METRIC_SEPARATOR);
             printMetric(sb.toString() + "Insert", serverStats.getOpcountersRepl().getInsert());
             printMetric(sb.toString() + "Query", serverStats.getOpcountersRepl().getQuery());
             printMetric(sb.toString() + "Update", serverStats.getOpcountersRepl().getUpdate());
@@ -470,9 +473,9 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printExtraInfoStats(ServerStats serverStats) {
-        if(serverStats.getExtra_info() != null) {
+        if (serverStats.getExtra_info() != null) {
             StringBuilder sb = new StringBuilder();
-            sb.append(getServerStatsMetricPrefix()).append("ExtraInfo |");
+            sb.append(getServerStatsMetricPrefix()).append("ExtraInfo").append(METRIC_SEPARATOR);
             printMetric(sb.toString() + "Heap Usage Bytes", serverStats.getExtra_info().getHeap_usage_bytes());
             printMetric(sb.toString() + "Page Faults", serverStats.getExtra_info().getPage_faults());
         } else {
@@ -481,13 +484,13 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printDurStats(ServerStats serverStats) {
-        if(serverStats.getDur() != null) {
+        if (serverStats.getDur() != null) {
             StringBuilder sb = new StringBuilder();
-            sb.append(getServerStatsMetricPrefix()).append("Dur |");
+            sb.append(getServerStatsMetricPrefix()).append("Dur").append(METRIC_SEPARATOR);
             printMetric(sb.toString() + "Commits", serverStats.getDur().getCommits());
             printMetric(sb.toString() + "Journaled MB", serverStats.getDur().getJournaledMB());
             printMetric(sb.toString() + "WriteToDataFilesMB", serverStats.getDur().getWriteToDataFilesMB());
-            printMetric(sb.toString() + "Compression" , serverStats.getDur().getCompression());
+            printMetric(sb.toString() + "Compression", serverStats.getDur().getCompression());
             printMetric(sb.toString() + "Commits In Write Lock", serverStats.getDur().getCommitsInWriteLock());
             printMetric(sb.toString() + "Early Commits", serverStats.getDur().getEarlyCommits());
 
@@ -497,9 +500,9 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void printCursorsStats(ServerStats serverStats) {
-        if(serverStats.getCursors() != null) {
+        if (serverStats.getCursors() != null) {
             StringBuilder sb = new StringBuilder();
-            sb.append(getServerStatsMetricPrefix()).append("Cursors |");
+            sb.append(getServerStatsMetricPrefix()).append("Cursors").append(METRIC_SEPARATOR);
             printMetric(sb.toString() + "clientCursors_size", serverStats.getCursors().getClientCursors_size());
             printMetric(sb.toString() + "totalOpen", serverStats.getCursors().getTotalOpen());
             printMetric(sb.toString() + "pinned", serverStats.getCursors().getPinned());
@@ -517,7 +520,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printConnectionStats(ServerStats serverStats) {
-        if(serverStats.getConnections() != null) {
+        if (serverStats.getConnections() != null) {
             printMetric(getServerStatsMetricPrefix() + "Connections|Current", serverStats.getConnections().getCurrent());
 
             printMetric(getServerStatsMetricPrefix() + "Connections|Available", serverStats.getConnections().getAvailable());
@@ -532,7 +535,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printMemoryStats(ServerStats serverStats) {
-        if(serverStats.getMem() != null) {
+        if (serverStats.getMem() != null) {
             printMetric(getServerStatsMetricPrefix() + "Memory|Bits", serverStats.getMem().getBits());
 
             printMetric(getServerStatsMetricPrefix() + "Memory|Resident", serverStats.getMem().getResident());
@@ -553,7 +556,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats Server stats
      */
     public void printGlobalLocksStats(ServerStats serverStats) {
-        if(serverStats.getGlobalLock() != null) {
+        if (serverStats.getGlobalLock() != null) {
             printMetric(getServerStatsMetricPrefix() + "Global Lock|Total Time", serverStats.getGlobalLock().getTotalTime());
 
             printMetric(getServerStatsMetricPrefix() + "Global Lock|Current Queue|Total", serverStats.getGlobalLock().getCurrentQueue().getTotal());
@@ -578,7 +581,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printIndexCounterStats(ServerStats serverStats) {
-        if(serverStats.getIndexCounters() != null) {
+        if (serverStats.getIndexCounters() != null) {
             printMetric(getServerStatsMetricPrefix() + "Index Counter|Accesses", serverStats.getIndexCounters().getAccesses());
 
             printMetric(getServerStatsMetricPrefix() + "Index Counter|Hits", serverStats.getIndexCounters().getHits());
@@ -597,7 +600,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printBackgroundFlushingStats(ServerStats serverStats) {
-        if(serverStats.getBackgroundFlushing() != null) {
+        if (serverStats.getBackgroundFlushing() != null) {
             printMetric(getServerStatsMetricPrefix() + "Background Flushing|Flushes", serverStats.getBackgroundFlushing().getFlushes());
 
             printMetric(getServerStatsMetricPrefix() + "Background Flushing|Total (ms)", serverStats.getBackgroundFlushing().getTotal_ms());
@@ -616,7 +619,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printNetworkStats(ServerStats serverStats) {
-        if(serverStats.getNetwork() != null) {
+        if (serverStats.getNetwork() != null) {
             printMetric(getServerStatsMetricPrefix() + "Network|Bytes In", serverStats.getNetwork().getBytesIn());
 
             printMetric(getServerStatsMetricPrefix() + "Network|Bytes Out", serverStats.getNetwork().getBytesOut());
@@ -633,7 +636,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printOperationStats(ServerStats serverStats) {
-        if(serverStats.getOpcounters() != null) {
+        if (serverStats.getOpcounters() != null) {
             printMetric(getServerStatsMetricPrefix() + "Operations|Insert", serverStats.getOpcounters().getInsert());
 
             printMetric(getServerStatsMetricPrefix() + "Operations|Query", serverStats.getOpcounters().getQuery());
@@ -656,7 +659,7 @@ public class MongoDBMonitor extends AManagedMonitor {
      * @param serverStats
      */
     public void printAssertStats(ServerStats serverStats) {
-        if(serverStats.getAsserts() != null) {
+        if (serverStats.getAsserts() != null) {
             printMetric(getServerStatsMetricPrefix() + "Asserts|Regular", serverStats.getAsserts().getRegular());
 
             printMetric(getServerStatsMetricPrefix() + "Asserts|Warning", serverStats.getAsserts().getWarning());
@@ -677,21 +680,28 @@ public class MongoDBMonitor extends AManagedMonitor {
         }
     }
 
+    private String getMetricPathPrefix() {
+        if (!metricPathPrefix.endsWith(METRIC_SEPARATOR)) {
+            metricPathPrefix += METRIC_SEPARATOR;
+        }
+        return metricPathPrefix;
+    }
+
     /**
      * Metric Prefix
      *
      * @return String
      */
     private String getServerStatsMetricPrefix() {
-        return metricPathPrefix + "Server Stats|";
+        return getMetricPathPrefix() + "Server Stats" + METRIC_SEPARATOR;
     }
 
     private String getDBStatsMetricPrefix(String dbName) {
-        return metricPathPrefix + "DB Stats|" + dbName + "|";
+        return getMetricPathPrefix() + "DB Stats|" + dbName + METRIC_SEPARATOR;
     }
 
     private String getCollectionStatsMetricPrefix(String dbName, String collectionName) {
-        return getDBStatsMetricPrefix(dbName) + "Collection Stats|" + collectionName + "|";
+        return getDBStatsMetricPrefix(dbName) + "Collection Stats|" + collectionName + METRIC_SEPARATOR;
     }
 
     private static boolean isNotEmpty(final String input) {
@@ -702,7 +712,7 @@ public class MongoDBMonitor extends AManagedMonitor {
         ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
         if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
             logger.error("Server status: " + db.command("serverStatus"));
-            logger.error("Error retrieving server status. Invalid permissions set for this user.DB = "+db.getName());
+            logger.error("Error retrieving server status. Invalid permissions set for this user.DB = " + db.getName());
         }
         return serverStats;
     }

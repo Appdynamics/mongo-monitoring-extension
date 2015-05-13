@@ -15,25 +15,28 @@
  */
 
 
-package com.appdynamics.monitors.mongo.json;
+package com.appdynamics.monitors.mongo.json.server;
 
-public class Extra_info{
-   	private String note;
+public class Extra_info {
+    private String note;
     private Number heap_usage_bytes;
-   	private Number page_faults;
+    private Number page_faults;
 
- 	public String getNote(){
-		return this.note;
-	}
-	public void setNote(String note){
-		this.note = note;
-	}
- 	public Number getPage_faults(){
-		return this.page_faults;
-	}
-	public void setPage_faults(Number page_faults){
-		this.page_faults = page_faults;
-	}
+    public String getNote() {
+        return this.note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public Number getPage_faults() {
+        return this.page_faults;
+    }
+
+    public void setPage_faults(Number page_faults) {
+        this.page_faults = page_faults;
+    }
 
     public Number getHeap_usage_bytes() {
         return heap_usage_bytes;

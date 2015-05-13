@@ -15,15 +15,25 @@
  */
 
 
-package com.appdynamics.monitors.mongo.json;
+package com.appdynamics.monitors.mongo.json.server;
 
-public class LocalTime{
-   	private String $date;
+public class Connections {
+    private Number available;
+    private Number current;
 
- 	public String get$date(){
-		return this.$date;
-	}
-	public void set$date(String $date){
-		this.$date = $date;
-	}
+    public Number getAvailable() {
+        return this.available;
+    }
+
+    public void setAvailable(Number available) {
+        this.available = available;
+    }
+
+    public Number getCurrent() {
+        return this.current;
+    }
+
+    public void setCurrent(Number current) {
+        this.current = current;
+    }
 }

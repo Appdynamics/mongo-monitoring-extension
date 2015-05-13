@@ -1,4 +1,4 @@
-package com.appdynamics.monitors.mongo;
+package com.appdynamics.monitors.mongo.json.db;
 
 public class DBStats {
 

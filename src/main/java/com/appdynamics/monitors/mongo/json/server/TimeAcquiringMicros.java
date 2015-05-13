@@ -15,22 +15,25 @@
  */
 
 
-package com.appdynamics.monitors.mongo.json;
+package com.appdynamics.monitors.mongo.json.server;
 
-public class Admin{
-   	private TimeAcquiringMicros timeAcquiringMicros;
-   	private TimeLockedMicros timeLockedMicros;
+public class TimeAcquiringMicros {
+    private Number r;
+    private Number w;
 
- 	public TimeAcquiringMicros getTimeAcquiringMicros(){
-		return this.timeAcquiringMicros;
-	}
-	public void setTimeAcquiringMicros(TimeAcquiringMicros timeAcquiringMicros){
-		this.timeAcquiringMicros = timeAcquiringMicros;
-	}
- 	public TimeLockedMicros getTimeLockedMicros(){
-		return this.timeLockedMicros;
-	}
-	public void setTimeLockedMicros(TimeLockedMicros timeLockedMicros){
-		this.timeLockedMicros = timeLockedMicros;
-	}
+    public Number getR() {
+        return this.r;
+    }
+
+    public void setR(Number r) {
+        this.r = r;
+    }
+
+    public Number getW() {
+        return this.w;
+    }
+
+    public void setW(Number w) {
+        this.w = w;
+    }
 }

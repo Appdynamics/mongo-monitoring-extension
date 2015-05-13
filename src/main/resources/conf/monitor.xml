@@ -28,6 +28,7 @@
                                 Additional MongoDB credentials can be placed in properties.xml
                         -->
                         <argument name="properties-path" is-required="false" default-value="monitors/MongoMonitor/properties.xml" />
+                        <argument name="metricPathPrefix" is-required="true" default-value="Custom Metrics|Mongo Server|" />
                 </task-arguments>
                 <java-task>
                     <classpath>mongo-monitoring-extension.jar</classpath>

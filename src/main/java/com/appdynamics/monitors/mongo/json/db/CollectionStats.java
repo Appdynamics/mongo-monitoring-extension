@@ -1,4 +1,4 @@
-package com.appdynamics.monitors.mongo;
+package com.appdynamics.monitors.mongo.json.db;
 
 import java.util.Map;
 
@@ -15,7 +15,7 @@ public class CollectionStats {
     private Number systemFlags;
     private Number userFlags;
     private Number totalIndexSize;
-    private Map<String, Number>  indexSizes;
+    private Map<String, Number> indexSizes;
 
     public String getNs() {
         return ns;
