@@ -362,7 +362,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
- ###Replica Stats
+###Replica Stats
 For each replica the following metrics are reported.
 <table><tbody>
 <tr>
@@ -378,7 +378,7 @@ For each replica the following metrics are reported.
 <td class='confluenceTd'> Conveys if the member is up (i.e. 1) or down (i.e. 0.) </td>
 </tr>
 <tr>
-<td class='confluenceTd'> State </td>
+<td class='confluenceTd'> [State](http://docs.mongodb.org/manual/reference/replica-states/) </td>
 <td class='confluenceTd'> Value between 0 and 10 that represents the replica state of the member. </td>
 </tr>
 </tbody>
