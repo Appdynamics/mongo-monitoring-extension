@@ -4,7 +4,6 @@
 The MongoDB custom monitor captures statistics from the MongoDB server and displays them in the AppDynamics Metric Browser.
 This extension works only with the standalone machine agent.
 
-To use with Replica Sets, you will need to deploy one copy of extension per host being monitored.
 
 Metrics include:
 
@@ -20,142 +19,83 @@ Metrics include:
 * Number of database operations including: insert, query, update, delete, get more, and total number of commands
 * Number of asserts since the server process started: regular, warnings, message, user, and number of times the rollover counter has rolled
 * Database related stats
-* Cluster related stats
+* Cluster related stats (status, health and uptime)
 
 ##Installation
 1. Run 'mvn clean install' from the mongo-monitoring-extension directory
-2. Download the file MongoMonitor-[version].zip found in the 'target' directory into \<machineagent install dir\>/monitors/
-3. Unzip the downloaded file
-4. In the newly created directory "MongoMonitor", edit the monitor.xml configuring the parameters specified below.
-5. If there are additional DB's to be monitored, add the credentials to properties.xml
-5. Restart the machineagent
-6. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
+2. Download the file MongoMonitor-[version].zip found in the 'target' directory into \<machineagent install dir\>/monitors/ and unzip.
+3. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified below.
+4. Restart the machineagent
+5. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
 
 
-##Configuration
-<table><tbody>
-<tr>
-<th align="left"> Parameter </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> host </td>
-<td class='confluenceTd'> Mongo DB host </td>
-</tr>
-<tr>
-<td class='confluenceTd'> port </td>
-<td class='confluenceTd'> Mongo DB port </td>
-</tr>
-<tr>
-<td class='confluenceTd'> username </td>
-<td class='confluenceTd'> Username with clusterMonitor role on admin database to access serverStatus </td>
-</tr>
-<tr>
-<td class='confluenceTd'> password </td>
-<td class='confluenceTd'> Password</td>
-</tr>
-<tr>
-<td class='confluenceTd'> use-ssl </td>
-<td class='confluenceTd'> true/false; "true" if MongoDB is started with SSL </td>
-</tr>
-<tr>
-<td class='confluenceTd'> pem-file </td>
-<td class='confluenceTd'> Path to pem-file with which MongoDB is started (monitors/MongoMonitor/mongodb.pem) </td>
-</tr>
-<tr>
-<td class='confluenceTd'> properties-path </td>
-<td class='confluenceTd'> Path to properties.xml where additional db's to be monitored can be specified </td>
-</tr>
-<tr>
-<td class='confluenceTd'> metricPathPrefix </td>
-<td class='confluenceTd'> Prefix to be looked in AppDynamics Metric Browser, use different prefixes to indiviudal servers to avoid conflict in metric path </td>
-</tr>
-</tbody>
-</table>
+## Configuration ##
 
-###Example Monitor XML
+Note : Please make sure to not use tab (\t) while editing yaml files. You may want to validate the yaml file using a [yaml validator](http://yamllint.com/)
+
+1. Configure the Mongo instances by editing the config.yml file in `<MACHINE_AGENT_HOME>/monitors/MongoMonitor/`.
+
+   For eg.
+   ```
+        # MongoDB host and port. If ReplicaSet is enabled, configure all OR subset of members of the cluster.
+        servers:
+          - host: "localhost"
+            port: 27017
+          - host: "localhost"
+            port: 27018
+
+        # Specify this key if Password Encryption Support is required.
+        # If specified, adminDBPassword and databases passwords are now the encrypted passwords.
+        # If not necessary keep empty
+        passwordEncryptionKey: ""
+
+        # Admin DB username and password. This extension assumes mongod is started with --auth (Authentication)
+        # The user should have clusterMonitor role as a minimum
+        adminDBUsername: "admin"
+        adminDBPassword: "admin"
+
+        # Change ssl to true if mongod is started with ssl. Then specify the pemFilePath, if not keep empty.
+        ssl: false
+        pemFilePath: ""
+
+        # Database particulars to be monitored. The db user should have read permissions for the metrics to be reported.
+        databases:
+          - dbName: "admin"
+            username: "admin"
+            password: "admin"
+          - dbName: "test"
+            username: "test"
+            password: "test"
+
+        #prefix used to show up metrics in AppDynamics
+        metricPathPrefix:  "Custom Metrics|Mongo Server|"
+
+   ```
+   
+2. Configure the path to the config.yml file by editing the <task-arguments> in the monitor.xml file in the `<MACHINE_AGENT_HOME>/monitors/MongoMonitor/` directory. Below is the sample
+
+     ```
+     <task-arguments>
+         <!-- config file-->
+         <argument name="config-file" is-required="true" default-value="monitors/MongoMonitor/config.yml" />
+          ....
+     </task-arguments>
+    ```
+
+Note : By default, a Machine agent or a AppServer agent can send a fixed number of metrics to the controller. To change this limit, please follow the instructions mentioned [here](http://docs.appdynamics.com/display/PRO14S/Metrics+Limits).
+For eg.  
+```    
+    java -Dappdynamics.agent.maxMetrics=2500 -jar machineagent.jar
 ```
-<monitor>
-        <name>Mongo DBMonitor</name>
-        <type>managed</type>
-        <description>Mongo DB server monitor</description>
-        <monitor-configuration></monitor-configuration>
-        <monitor-run-task>
-                <execution-style>periodic</execution-style>
-                <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
-                <name>Mongo DB Monitor Run Task</name>
-                <display-name>Mongo DB Monitor Task</display-name>
-                <description>Mongo DB Monitor Task</description>
-                <type>java</type>
-                <execution-timeout-in-secs>60</execution-timeout-in-secs>
-                <task-arguments>
-                        <argument name="host" is-required="true" default-value="localhost" />
-                        <argument name="port" is-required="true" default-value="27017" />
-                        <!--User should have clusterMonitor role on admin database -->
-                        <argument name="username" is-required="true" default-value="admin" />
-                        <argument name="password" is-required="true" default-value="admin" />
-                        <!-- SSL: If ssl enabled, change "use-ssl" to true and point pem-file to .pem file -->
-                        <argument name="use-ssl" is-required="false" default-value="false" />
-                        <argument name="pem-file" is-required="false" default-value="monitors/MongoMonitor/mongodb.pem" />
-
-                        <!-- Additional MongoDB credentials (OPTIONAL)
-                                Additional MongoDB credentials can be placed in properties.xml
-                        -->
-                        <argument name="properties-path" is-required="false" default-value="monitors/MongoMonitor/properties.xml" />
-                        <argument name="metricPathPrefix" is-required="true" default-value="Custom Metrics|Mongo Server|" />
-                </task-arguments>
-                <java-task>
-                    <classpath>mongo-monitoring-extension.jar</classpath>
-                        <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
-                </java-task>
-        </monitor-run-task>
-</monitor>
-```
-#####Note: Ensure that the user has appropriate permissions to the individual databases! Otherwise, metrics will not be displayed in the AppDynamics Metric Browser.
 
 ##Password Encryption Support
-To avoid setting the clear text password in the monitor.xml and properties.xml, please follow the process below to encrypt the passwords
+To avoid setting the clear text password in the config.yml, please follow the process below to encrypt the passwords
 
 1. Download the util jar to encrypt the password from [https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) and navigate to the downloaded directory
 2. Encrypt password from the commandline
 `java -cp appd-exts-commons-1.1.2.jar com.appdynamics.extensions.crypto.Encryptor myKey myPassword`
-3. Add the following properties in the monitor.xml substituting the default password argument.
-
- ```
- <argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/>
- <argument name="encryption-key" is-required="true" default-value="myKey"/>
- ```
-4. For every db, use the same encryption key to encrypt the password and substitue the default password argument with `<password-encrypted>ENCRYPTED_PASSWORD</password-encrypted>`
-
-##Directory Structure
-
-<table><tbody>
-<tr>
-<th align="left"> File/Folder </th>
-<th align="left"> Description </th>
-</tr>
-<tr>
-<td class='confluenceTd'> src/main/java </td>
-<td class='confluenceTd'> Contains source code to Mongo DB Custom Monitor </td>
-</tr>
-<tr>
-<td class='confluenceTd'> src/main/resources/conf </td>
-<td class='confluenceTd'> Contains the monitor.xml and properties.xml </td>
-</tr>
-<tr>
-<tr>
-<td class='confluenceTd'> target </td>
-<td class='confluenceTd'> The distributable zip will be created in this directory after the maven build. </td>
-</tr>
-<tr>
-<td class='confluenceTd'> pom.xml </td>
-<td class='confluenceTd'> Maven Pom </td>
-</tr>
-</tbody>
-</table>
-
-
-*Main Java File*: **src/com/appdynamics/monitors/mongo/MongoDBMonitor.java**  -\> This file contains the metric parsing and printing.
+3. Specify the passwordEncryptionKey and encrypted adminDBPassword in config.yml
+4. For every db, use the same encryption key to encrypt the password and specify the encrypted password in config.yml
 
 
 ##Metrics
@@ -422,6 +362,28 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
+ ###Replica Stats
+For each replica the following metrics are reported.
+<table><tbody>
+<tr>
+<th align="left"> Metric Name </th>
+<th align="left"> Description </th>
+</tr>
+<tr>
+<td class='confluenceTd'> Up Time (ms) </td>
+<td class='confluenceTd'> The duration of time that the server is up </td>
+</tr>
+<tr>
+<td class='confluenceTd'> Health </td>
+<td class='confluenceTd'> Conveys if the member is up (i.e. 1) or down (i.e. 0.) </td>
+</tr>
+<tr>
+<td class='confluenceTd'> State </td>
+<td class='confluenceTd'> Value between 0 and 10 that represents the replica state of the member. </td>
+</tr>
+</tbody>
+</table>
+
 ###DB Stats
 #####<DB Name>
 
@@ -525,6 +487,7 @@ Consider this value in combination with the value of Current to understand the c
  </tr>
  </tbody>
  </table>
+
 
 
 ##Contributing

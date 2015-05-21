@@ -1,0 +1,32 @@
+# MongoDB host and port. If ReplicaSet is enabled, configure all or subset of members of the cluster.
+servers:
+  - host: "localhost"
+    port: 27017
+  - host: "localhost"
+    port: 27018
+
+# Specify this key if Password Encryption Support is required.
+# If specified, adminDBPassword and databases passwords are now the encrypted passwords.
+# If not necessary keep empty
+passwordEncryptionKey: ""
+
+# Admin DB username and password. This extension assumes mongod is started with --auth (Authentication)
+# The user should have clusterMonitor role as a minimum
+adminDBUsername: "admin"
+adminDBPassword: "admin"
+
+# Change ssl to true if mongod is started with ssl. Then specify the pemFilePath, if not keep empty.
+ssl: false
+pemFilePath: ""
+
+# Database particulars to be monitored. The db user should have read permissions for the metrics to be reported.
+databases:
+  - dbName: "admin"
+    username: "admin"
+    password: "admin"
+  - dbName: "test"
+    username: "test"
+    password: "test"
+
+#prefix used to show up metrics in AppDynamics
+metricPathPrefix:  "Custom Metrics|Mongo Server|"

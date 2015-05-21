@@ -16,13 +16,27 @@
 
 package com.appdynamics.monitors.mongo;
 
+import com.appdynamics.extensions.PathResolver;
 import com.appdynamics.extensions.crypto.CryptoUtil;
+import com.appdynamics.extensions.yml.YmlReader;
+import com.appdynamics.monitors.mongo.config.Configuration;
+import com.appdynamics.monitors.mongo.config.Database;
+import com.appdynamics.monitors.mongo.config.Server;
 import com.appdynamics.monitors.mongo.json.db.CollectionStats;
 import com.appdynamics.monitors.mongo.json.db.DBStats;
+import com.appdynamics.monitors.mongo.json.replSet.Member;
+import com.appdynamics.monitors.mongo.json.replSet.ReplicaStats;
 import com.appdynamics.monitors.mongo.json.server.ServerStats;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
-import com.mongodb.*;
-import com.singularity.ee.agent.systemagent.SystemAgent;
+import com.mongodb.CommandResult;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoCredential;
+import com.mongodb.ServerAddress;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
@@ -36,10 +50,6 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.util.io.pem.PemObject;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
 
 import javax.naming.AuthenticationException;
 import javax.net.ssl.SSLContext;
@@ -47,46 +57,34 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import java.io.File;
 import java.io.FileReader;
-import java.net.URL;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
-import java.security.CodeSource;
 import java.security.KeyStore;
-import java.security.ProtectionDomain;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class MongoDBMonitor extends AManagedMonitor {
 
     private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
+    public static final String CONFIG_ARG = "config-file";
 
-    private static final String ARG_HOST = "host";
-    private static final String ARG_PORT = "port";
-    private static final String ARG_USER = "username";
-    private static final String ARG_PASS = "password";
-    private static final String USE_SSL = "use-ssl";
-    private static final String PEM_FILE_PATH = "pem-file";
-    private static final String ARG_DB = "db";
     private static final String ADMIN_DB = "admin";
-    private static final String ARG_XML_PATH = "properties-path";
     private static final String ENCRYPTION_KEY = "encryption-key";
     private static final String PASSWORD_ENCRYPTED = "password-encrypted";
     private static final String OK_RESPONSE = "1.0";
     public static final String METRIC_SEPARATOR = "|";
 
-    private static String encryptionKey;
     private String metricPathPrefix;
     private MongoClient mongoClient;
-    private String host;
-    private String port;
-    private File installDir;
 
     public MongoDBMonitor() {
         String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
         logger.info(msg);
         System.out.println(msg);
-        installDir = resolveInstallDir();
     }
 
     /**
@@ -94,158 +92,85 @@ public class MongoDBMonitor extends AManagedMonitor {
      *
      * @see com.singularity.ee.agent.systemagent.api.ITask#execute(java.util.Map, com.singularity.ee.agent.systemagent.api.TaskExecutionContext)
      */
-    public TaskOutput execute(Map<String, String> params, TaskExecutionContext arg1)
+    public TaskOutput execute(Map<String, String> taskArgs, TaskExecutionContext arg1)
             throws TaskExecutionException {
-        if (params != null) {
+        if (taskArgs != null) {
             logger.info("Starting Mongo Monitoring Task");
-            metricPathPrefix = params.get("metricPathPrefix");
+            String configFilename = resolvePath(taskArgs.get(CONFIG_ARG));
             try {
-                MongoCredential adminCredentials = getAdminCredentials(params);
+                Configuration config = YmlReader.readFromFile(configFilename, Configuration.class);
+                metricPathPrefix = config.getMetricPathPrefix();
 
-                MongoClientOptions options = getMongoClientOptions(params);
+                // Reads admin DB credentials, ssl options and connects to admin DB, This assumes that mongod is started with Authentication enabled.
+                MongoCredential adminDBCredentials = getAdminDBCredentials(config);
+                MongoClientOptions clientSSLOptions = getMongoClientSSLOptions(config);
+                DB adminDB = connectToAdminDB(config, adminDBCredentials, clientSSLOptions);
 
-                DB adminDB = connectToAdminDB(adminCredentials, options);
+                ReplicaStats replicaStats = getReplicaStats(adminDB);
+                printReplicaStats(replicaStats);
 
                 ServerStats serverStats = getServerStats(adminDB);
-
                 printServerStats(serverStats);
 
-                List<MongoCredential> additionalDBDetails = getAdditionalDBDetails(params);
+                List<MongoCredential> additionalDBDetails = getAdditionalDBDetails(config);
+                fetchAndPrintDBStats(additionalDBDetails);
 
-                List<DB> additionalDBs = connect(additionalDBDetails);
-
-                for (DB db : additionalDBs) {
-                    try {
-                        DBStats dbStats = getDBStats(db);
-                        printDBStats(dbStats);
-
-                        Set<String> collectionNames = db.getCollectionNames();
-                        if (collectionNames != null && collectionNames.size() > 0) {
-                            for (String collectionName : collectionNames) {
-                                DBCollection collection = db.getCollection(collectionName);
-                                CommandResult collectionStatsResult = collection.getStats();
-                                if (collectionStatsResult != null && collectionStatsResult.ok()) {
-                                    CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
-                                    printCollectionStats(db.getName(), collectionStats);
-                                } else {
-                                    String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
-                                    if (collectionStatsResult != null) {
-                                        errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
-                                    }
-                                    logger.error(errorMessage);
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        logger.error(e);
-                    }
-                }
                 logger.info("Mongo Monitoring Task completed successfully");
-                return new TaskOutput("Mongo DB Metric Upload Complete");
+                return new TaskOutput("Mongo Monitoring Task completed successfully");
             } catch (Exception e) {
-                logger.error("Exception", e);
+                logger.error("Metrics Collection Failed: ", e);
             } finally {
                 if (mongoClient != null) {
                     mongoClient.close();
                 }
             }
         }
-        throw new TaskExecutionException("Mongo monitoring task completed with failures.");
+        throw new TaskExecutionException("Mongo Monitoring Task completed with failures.");
     }
 
-    private DBStats getDBStats(DB db) {
-        DBStats dbStats = new Gson().fromJson(db.command("dbStats").toString().trim(), DBStats.class);
-        if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
-            logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
-        }
-        return dbStats;
+    private MongoCredential getAdminDBCredentials(Configuration config) {
+        MongoCredential cred;
+        String username = config.getAdminDBUsername();
+        String password = getAdminDBPassword(config);
+
+        cred = MongoCredential.createMongoCRCredential(username, ADMIN_DB, password.toCharArray());
+        return cred;
     }
 
-    private List<MongoCredential> getAdditionalDBDetails(Map<String, String> params) {
-
-        String xmlPath = params.get(ARG_XML_PATH);
-        List<MongoCredential> additionalDBCredentials = new ArrayList<MongoCredential>();
-
-        if (isNotEmpty(xmlPath)) {
-            File file = resolvePath(xmlPath);
-            if (file.exists()) {
+    private MongoClientOptions getMongoClientSSLOptions(Configuration config) {
+        MongoClientOptions clientOpts = null;
+        if (config.isSsl()) {
+            String filePath = config.getPemFilePath();
+            if (isNotEmpty(filePath)) {
                 try {
-                    SAXReader reader = new SAXReader();
-                    Document doc = reader.read(file);
-                    Element root = doc.getRootElement();
-
-                    for (Element credElem : (List<Element>) root.elements("credentials")) {
-                        if (credElem.elementText(ARG_DB).length() > 0) {
-                            String password = getDBPassword(credElem);
-                            MongoCredential cred = MongoCredential.createMongoCRCredential(
-                                    credElem.elementText(ARG_USER),
-                                    credElem.elementText(ARG_DB),
-                                    password.toCharArray());
-                            additionalDBCredentials.add(cred);
-                        }
-                    }
-                } catch (DocumentException e) {
-                    logger.error("Cannot read '" + file.getAbsolutePath() + "'. Monitor is running without additional credentials", e);
+                    clientOpts = new MongoClientOptions.Builder().socketFactory(getSocketFactoryFromPEM(filePath)).build();
+                } catch (Exception e) {
+                    logger.error("Error establishing ssl socket factory", e);
+                    throw new RuntimeException("Error establishing ssl socket factory");
                 }
             } else {
-                logger.error("Cannot read '" + xmlPath + "'. Monitor is running without additional credentials." +
-                        "The absolute path is " + file.getAbsolutePath());
+                String msg = "The argument pemFilePath is null or empty in config.yml";
+                logger.error(msg);
+                throw new RuntimeException(msg);
             }
         }
-        return additionalDBCredentials;
+        return clientOpts;
     }
 
-    private File resolvePath(String xmlPath) {
-        File file = new File(xmlPath);
-        if (file.exists()) {
-            return file;
-        } else {
-            return new File(installDir, xmlPath);
-        }
-    }
-
-    private File resolveInstallDir() {
-        File installDir = null;
+    private DB connectToAdminDB(Configuration config, MongoCredential adminCredentials, MongoClientOptions options) {
+        List<ServerAddress> seeds = Lists.newArrayList();
         try {
-            ProtectionDomain pd = SystemAgent.class.getProtectionDomain();
-            if (pd != null) {
-                CodeSource cs = pd.getCodeSource();
-                if (cs != null) {
-                    URL url = cs.getLocation();
-                    String path = URLDecoder.decode(url.getFile(), "UTF-8");
-                    File dir = new File(path).getParentFile();
-                    if (dir.exists()) {
-                        installDir = dir;
-                    } else {
-                        logger.error("Install dir resolved to " + dir.getAbsolutePath() + ", however it doesnt exist.");
-                    }
-                }
-
+            for (Server server : config.getServers()) {
+                seeds.add(new ServerAddress(server.getHost(), server.getPort()));
             }
-        } catch (Exception e) {
-            logger.error("Error while resolving the Install Dir ", e);
-        }
-        if (installDir != null) {
-            logger.info("Install dir resolved to " + installDir.getAbsolutePath());
-            return installDir;
-        } else {
-            File workDir = new File("");
-            logger.info("Failed to resolve install dir, returning current work dir" + workDir.getAbsolutePath());
-            return workDir;
-        }
-    }
-
-    private DB connectToAdminDB(MongoCredential adminCredentials, MongoClientOptions options) {
-        try {
             if (options != null) {
-                mongoClient = new MongoClient(new ServerAddress(host, Integer.parseInt(port)), options);
+                mongoClient = new MongoClient(seeds, options);
             } else {
-                mongoClient = new MongoClient(host, Integer.parseInt(port));
+                mongoClient = new MongoClient(seeds);
             }
         } catch (UnknownHostException e) {
-            String msg = String.format("Unable to connect to mongodb; host=%s, port=%s", host, port);
-            logger.error(msg, e);
-            throw new RuntimeException(msg, e);
+            logger.error(e);
+            throw new RuntimeException(e);
         }
 
         DB db = mongoClient.getDB(adminCredentials.getSource());
@@ -258,29 +183,6 @@ public class MongoDBMonitor extends AManagedMonitor {
             throw new RuntimeException(msg);
         }
         return db;
-    }
-
-    private MongoClientOptions getMongoClientOptions(Map<String, String> params) {
-        String useSSL = params.get(USE_SSL);
-        MongoClientOptions clientOpts = null;
-        if (Boolean.valueOf(useSSL)) {
-            String filePath = params.get(PEM_FILE_PATH);
-            if (isNotEmpty(filePath)) {
-                try {
-                    clientOpts = new MongoClientOptions.Builder().socketFactory(getSocketFactoryFromPEM(filePath)).build();
-                } catch (Exception e) {
-                    logger.error("Error establishing ssl socket factory", e);
-                    throw new RuntimeException("Error establishing ssl socket factory");
-                }
-            } else {
-                String msg = "The argument " + PEM_FILE_PATH + "is null or empty in monitor.xml";
-                logger.error(msg);
-                throw new RuntimeException(msg);
-            }
-        } else {
-            logger.debug(USE_SSL + " value in monitor.xml set to " + useSSL);
-        }
-        return clientOpts;
     }
 
     private SSLSocketFactory getSocketFactoryFromPEM(String filePath) throws Exception {
@@ -305,25 +207,22 @@ public class MongoDBMonitor extends AManagedMonitor {
         return sslContext.getSocketFactory();
     }
 
-    private String getPassword(Map<String, String> taskArguments) {
-        if (taskArguments.get(ARG_PASS) != null) {
-            return taskArguments.get(ARG_PASS);
-        } else if (taskArguments.containsKey(PASSWORD_ENCRYPTED)) {
-            encryptionKey = taskArguments.get(ENCRYPTION_KEY);
-            String encryptedPassword = taskArguments.get(PASSWORD_ENCRYPTED);
+    private String getAdminDBPassword(Configuration config) {
+        String encryptionKey = config.getPasswordEncryptionKey();
+        if (Strings.isNullOrEmpty(encryptionKey)) {
+            return config.getAdminDBPassword();
+        } else {
+            String encryptedPassword = config.getAdminDBPassword();
             return getDecryptedPassword(encryptionKey, encryptedPassword);
         }
-        return "";
     }
 
-    private String getDBPassword(Element credElem) {
-        if (credElem.elements().contains(ARG_PASS)) {
-            return credElem.elementText(ARG_PASS);
-        } else if (credElem.elements().contains(PASSWORD_ENCRYPTED)) {
-            String encryptedPassword = credElem.elementText(PASSWORD_ENCRYPTED);
-            return getDecryptedPassword(encryptionKey, encryptedPassword);
+    private String getDBPassword(String dbPassword, String encryptionKey) {
+        if (Strings.isNullOrEmpty(encryptionKey)) {
+            return dbPassword;
+        } else {
+            return getDecryptedPassword(encryptionKey, dbPassword);
         }
-        return "";
     }
 
     private String getDecryptedPassword(String encryptionKey, String encryptedPassword) {
@@ -331,20 +230,6 @@ public class MongoDBMonitor extends AManagedMonitor {
         argsForDecryption.put(PASSWORD_ENCRYPTED, encryptedPassword);
         argsForDecryption.put(ENCRYPTION_KEY, encryptionKey);
         return CryptoUtil.getPassword(argsForDecryption);
-    }
-
-    private MongoCredential getAdminCredentials(final Map<String, String> params) {
-        MongoCredential cred;
-        host = params.get(ARG_HOST);
-        port = params.get(ARG_PORT);
-
-        String password = getPassword(params);
-
-        cred = MongoCredential.createMongoCRCredential(
-                params.get(ARG_USER),
-                ADMIN_DB,
-                password.toCharArray());
-        return cred;
     }
 
     /**
@@ -370,6 +255,77 @@ public class MongoDBMonitor extends AManagedMonitor {
         return mongoDBs;
     }
 
+    private void fetchAndPrintDBStats(List<MongoCredential> additionalDBDetails) throws UnknownHostException, AuthenticationException {
+        List<DB> additionalDBs = connect(additionalDBDetails);
+
+        for (DB db : additionalDBs) {
+            try {
+                DBStats dbStats = getDBStats(db);
+                printDBStats(dbStats);
+
+                Set<String> collectionNames = db.getCollectionNames();
+                if (collectionNames != null && collectionNames.size() > 0) {
+                    for (String collectionName : collectionNames) {
+                        DBCollection collection = db.getCollection(collectionName);
+                        CommandResult collectionStatsResult = collection.getStats();
+                        if (collectionStatsResult != null && collectionStatsResult.ok()) {
+                            CollectionStats collectionStats = new Gson().fromJson(collectionStatsResult.toString(), CollectionStats.class);
+                            printCollectionStats(db.getName(), collectionStats);
+                        } else {
+                            String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
+                            if (collectionStatsResult != null) {
+                                errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                            }
+                            logger.error(errorMessage);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.error(e);
+            }
+        }
+    }
+
+    private List<MongoCredential> getAdditionalDBDetails(Configuration config) {
+        Database[] databases = config.getDatabases();
+        String encryptionKey = config.getPasswordEncryptionKey();
+
+        List<MongoCredential> additionalDBCredentials = new ArrayList<MongoCredential>();
+
+        for (Database db : databases) {
+            String password = getDBPassword(db.getPassword(), encryptionKey);
+            MongoCredential cred = MongoCredential.createMongoCRCredential(db.getUsername(), db.getDbName(), password.toCharArray());
+            additionalDBCredentials.add(cred);
+        }
+        return additionalDBCredentials;
+    }
+
+    private ServerStats getServerStats(DB db) {
+        ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
+        if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
+            logger.error("Server status: " + db.command("serverStatus"));
+            logger.error("Error retrieving server status. Invalid permissions set for this user.DB = " + db.getName());
+        }
+        return serverStats;
+    }
+
+    private ReplicaStats getReplicaStats(DB adminDB) {
+        ReplicaStats replicaStats = new Gson().fromJson(adminDB.command("replSetGetStatus").toString().trim(), ReplicaStats.class);
+        if (replicaStats != null && !replicaStats.getOk().toString().equals(OK_RESPONSE)) {
+            logger.info("Replica Set not configured");
+            return null;
+        }
+        return replicaStats;
+    }
+
+    private DBStats getDBStats(DB db) {
+        DBStats dbStats = new Gson().fromJson(db.command("dbStats").toString().trim(), DBStats.class);
+        if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
+            logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
+        }
+        return dbStats;
+    }
+
     /**
      * Returns the metric to the AppDynamics Controller.
      *
@@ -381,15 +337,15 @@ public class MongoDBMonitor extends AManagedMonitor {
             try {
                 MetricWriter metricWriter = getMetricWriter(metricName,
                         MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
                 );
                 metricWriter.printMetric(String.valueOf(Math.round(metricValue.doubleValue())));
             } catch (Exception e) {
                 logger.error(e);
             }
         } else {
-            logger.warn("Metric " + metricName + "is null");
+            logger.warn("Metric " + metricName + " is null");
         }
     }
 
@@ -408,6 +364,17 @@ public class MongoDBMonitor extends AManagedMonitor {
             printOperationStats(serverStats);
             printOpCountersReplStats(serverStats);
             printMemoryStats(serverStats);
+        }
+    }
+
+    private void printReplicaStats(ReplicaStats replicaStats) {
+        if (replicaStats != null) {
+            String replicaStatsPath = getReplicaStatsMetricPrefix();
+            for (Member member : replicaStats.getMembers()) {
+                printMetric(replicaStatsPath + member.getName() + METRIC_SEPARATOR + "Health", member.getHealth());
+                printMetric(replicaStatsPath + member.getName() + METRIC_SEPARATOR + "State", member.getState());
+                printMetric(replicaStatsPath + member.getName() + METRIC_SEPARATOR + "Uptime", member.getUptime());
+            }
         }
     }
 
@@ -704,17 +671,29 @@ public class MongoDBMonitor extends AManagedMonitor {
         return getDBStatsMetricPrefix(dbName) + "Collection Stats|" + collectionName + METRIC_SEPARATOR;
     }
 
+    private String getReplicaStatsMetricPrefix() {
+        return getMetricPathPrefix() + "Replica Stats" + METRIC_SEPARATOR;
+    }
+
     private static boolean isNotEmpty(final String input) {
         return input != null && input.trim().length() > 0;
     }
 
-    private ServerStats getServerStats(DB db) {
-        ServerStats serverStats = new Gson().fromJson(db.command("serverStatus").toString().trim(), ServerStats.class);
-        if (serverStats != null && !serverStats.getOk().toString().equals(OK_RESPONSE)) {
-            logger.error("Server status: " + db.command("serverStatus"));
-            logger.error("Error retrieving server status. Invalid permissions set for this user.DB = " + db.getName());
+    private String resolvePath(String filename) {
+        if (filename == null) {
+            return "";
         }
-        return serverStats;
+        //for absolute paths
+        if (new File(filename).exists()) {
+            return filename;
+        }
+        //for relative paths
+        File jarPath = PathResolver.resolveDirectory(AManagedMonitor.class);
+        String configFileName = "";
+        if (!Strings.isNullOrEmpty(filename)) {
+            configFileName = jarPath + File.separator + filename;
+        }
+        return configFileName;
     }
 
     public static String getImplementationVersion() {
