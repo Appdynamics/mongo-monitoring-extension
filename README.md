@@ -22,9 +22,9 @@ Metrics include:
 * Cluster related stats (status, health and uptime)
 
 ##Installation
-1. Run 'mvn clean install' from the mongo-monitoring-extension directory
-2. Download the file MongoMonitor-[version].zip found in the 'target' directory into \<machineagent install dir\>/monitors/ and unzip.
-3. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified below.
+1. Run `mvn clean install` from the mongo-monitoring-extension directory
+2. Download and unzip the file MongoMonitor-[version].zip found in the 'target' directory into `<MACHINE_AGENT_HOME>/monitors/`.
+3. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified in the below section.
 4. Restart the machineagent
 5. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
 
@@ -44,12 +44,11 @@ Note : Please make sure to not use tab (\t) while editing yaml files. You may wa
           - host: "localhost"
             port: 27018
 
-        # Specify this key if Password Encryption Support is required.
+        # Specify this key if Password Encryption Support is required else keep it empty
         # If specified, adminDBPassword and databases passwords are now the encrypted passwords.
-        # If not necessary keep empty
         passwordEncryptionKey: ""
 
-        # Admin DB username and password. This extension assumes mongod is started with --auth (Authentication)
+        # Admin DB username and password. Required if mongod is started with --auth (Authentication) else keep empty
         # The user should have clusterMonitor role as a minimum
         adminDBUsername: "admin"
         adminDBPassword: "admin"
