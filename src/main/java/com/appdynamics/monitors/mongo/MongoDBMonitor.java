@@ -175,12 +175,16 @@ public class MongoDBMonitor extends AManagedMonitor {
 
         DB db = mongoClient.getDB(adminCredentials.getSource());
 
-        boolean authenticated = db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
-        if (!authenticated) {
-            String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
-                    adminCredentials.getSource(), adminCredentials.getUserName());
-            logger.error(msg);
-            throw new RuntimeException(msg);
+        if(!Strings.isNullOrEmpty(config.getAdminDBUsername()) || !Strings.isNullOrEmpty(config.getAdminDBPassword())) {
+            boolean authenticated = db.authenticate(adminCredentials.getUserName(), adminCredentials.getPassword());
+            if (!authenticated) {
+                String msg = String.format("Unable to authenticate with the db %s, user=%s, using password ****",
+                        adminCredentials.getSource(), adminCredentials.getUserName());
+                logger.error(msg);
+                throw new RuntimeException(msg);
+            }
+        } else {
+            logger.debug("Mongodb Authentication is not enabled");
         }
         return db;
     }
