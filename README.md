@@ -22,8 +22,8 @@ Metrics include:
 * Cluster related stats (status, health and uptime)
 
 ##Installation
-1. Run `mvn clean install` from the mongo-monitoring-extension directory
-2. Download and unzip the file MongoMonitor-[version].zip found in the 'target' directory into `<MACHINE_AGENT_HOME>/monitors/`.
+1. To build from source, clone this repository and run 'mvn clean install'. This will produce a MongoMonitor-VERSION.zip in the target directory. Alternatively, download the latest release archive from [Github](https://github.com/Appdynamics/mongo-monitoring-extension/releases).
+2. Unzip the file MongoMonitor-[version].zip into `<MACHINE_AGENT_HOME>/monitors/`.
 3. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified in the below section.
 4. Restart the machineagent
 5. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
@@ -57,15 +57,6 @@ Note : Please make sure to not use tab (\t) while editing yaml files. You may wa
         ssl: false
         pemFilePath: ""
 
-        # Database particulars to be monitored. The db user should have read permissions for the metrics to be reported.
-        databases:
-          - dbName: "admin"
-            username: "admin"
-            password: "admin"
-          - dbName: "test"
-            username: "test"
-            password: "test"
-
         #prefix used to show up metrics in AppDynamics
         metricPathPrefix:  "Custom Metrics|Mongo Server|"
 
@@ -88,13 +79,12 @@ For eg.
 ```
 
 ##Password Encryption Support
-To avoid setting the clear text password in the config.yml, please follow the process below to encrypt the passwords
+To avoid setting the clear text password in the config.yml, please follow the process below to encrypt the password
 
 1. Download the util jar to encrypt the password from [https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) and navigate to the downloaded directory
 2. Encrypt password from the commandline
 `java -cp appd-exts-commons-1.1.2.jar com.appdynamics.extensions.crypto.Encryptor myKey myPassword`
 3. Specify the passwordEncryptionKey and encrypted adminDBPassword in config.yml
-4. For every db, use the same encryption key to encrypt the password and specify the encrypted password in config.yml
 
 
 ##Metrics

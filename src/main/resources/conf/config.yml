@@ -9,18 +9,12 @@ passwordEncryptionKey: ""
 
 # Admin DB username and password. Required if mongod is started with --auth (Authentication) else keep empty
 # The user should have clusterMonitor role as a minimum
-adminDBUsername: ""
-adminDBPassword: ""
+adminDBUsername: "admin"
+adminDBPassword: "admin"
 
 # Change ssl to true if mongod is started with ssl. Then specify the pemFilePath, if not keep empty.
 ssl: false
 pemFilePath: ""
-
-# Database particulars to be monitored. The db user should have read permissions for the metrics to be reported.
-databases:
-  - dbName: "admin"
-    username: ""
-    password: ""
 
 #prefix used to show up metrics in AppDynamics
 metricPathPrefix:  "Custom Metrics|Mongo Server|"

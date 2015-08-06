@@ -12,9 +12,6 @@ public class Configuration {
 
     private boolean ssl;
     private String pemFilePath;
-
-    private Database[] databases;
-
     private String metricPathPrefix;
 
     public Server[] getServers() {
@@ -63,14 +60,6 @@ public class Configuration {
 
     public void setPemFilePath(String pemFilePath) {
         this.pemFilePath = pemFilePath;
-    }
-
-    public Database[] getDatabases() {
-        return databases;
-    }
-
-    public void setDatabases(Database[] databases) {
-        this.databases = databases;
     }
 
     public String getMetricPathPrefix() {
