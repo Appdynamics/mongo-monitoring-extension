@@ -128,7 +128,7 @@ public class MongoDBMonitor extends AManagedMonitor {
             MongoCredential adminDBCredential = MongoCredential.createCredential(config.getAdminDBUsername(), ADMIN_DB, getAdminDBPassword(config).toCharArray());
             credentials.add(adminDBCredential);
         } else {
-            logger.debug("adminDBUsername and adminDBPassword in config.yml is null or empty");
+            logger.info("adminDBUsername and adminDBPassword in config.yml is null or empty");
         }
         return credentials;
     }
