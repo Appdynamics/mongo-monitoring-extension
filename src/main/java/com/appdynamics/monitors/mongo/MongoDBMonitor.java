@@ -25,16 +25,7 @@ import com.appdynamics.monitors.mongo.config.Server;
 import com.appdynamics.monitors.mongo.exception.MongoMonitorException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.mongodb.BasicDBList;
-import com.mongodb.CommandResult;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.DBObject;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
-import com.mongodb.MongoCommandException;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
+import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.util.JSON;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
@@ -44,13 +35,14 @@ import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.commons.net.util.SSLContextUtils;
 import org.apache.commons.net.util.TrustManagerUtils;
-import org.apache.log4j.Logger;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -67,7 +59,7 @@ import java.util.Set;
 
 public class MongoDBMonitor extends AManagedMonitor {
 
-    private static final Logger logger = Logger.getLogger(MongoDBMonitor.class);
+    private static final Logger logger = LoggerFactory.getLogger(MongoDBMonitor.class);
     public static final String CONFIG_ARG = "config-file";
 
     private static final String ADMIN_DB = "admin";
@@ -80,9 +72,7 @@ public class MongoDBMonitor extends AManagedMonitor {
     private MongoClient mongoClient;
 
     public MongoDBMonitor() {
-        String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
-        logger.info(msg);
-        System.out.println(msg);
+        System.out.println(logVersion());
     }
 
     /**
@@ -93,7 +83,7 @@ public class MongoDBMonitor extends AManagedMonitor {
     public TaskOutput execute(Map<String, String> taskArgs, TaskExecutionContext arg1)
             throws TaskExecutionException {
         if (taskArgs != null) {
-            logger.info("Starting Mongo Monitoring Task");
+            logger.info(logVersion());
             String configFilename = getConfigFilename(taskArgs.get(CONFIG_ARG));
             try {
                 Configuration config = YmlReader.readFromFile(configFilename, Configuration.class);
@@ -104,10 +94,10 @@ public class MongoDBMonitor extends AManagedMonitor {
                 mongoClient = buildMongoClient(config, credentials, clientSSLOptions);
                 MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
 
-                fetchAndPrintServerStats(adminDB);
+                fetchAndPrintServerStats(adminDB, config.getServerStatusExcludeMetricFields());
                 fetchAndPrintReplicaSetStats(adminDB);
                 fetchAndPrintDBStats();
-                fetchAndPrintCollectionStats();
+                //fetchAndPrintCollectionStats();
 
                 logger.info("Mongo Monitoring Task completed successfully");
                 return new TaskOutput("Mongo Monitoring Task completed successfully");
@@ -217,13 +207,31 @@ public class MongoDBMonitor extends AManagedMonitor {
                 logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
             }*/
         } catch (MongoCommandException e) {
-            logger.error(e);
+            logger.error("Error while executing " + command + " for db " + db, e);
         }
         return dbObject;
     }
 
-    private void fetchAndPrintServerStats(MongoDatabase adminDB) {
-        DBObject serverStats = executeMongoCommand(adminDB, "serverStatus");
+    private DBObject executeMongoCommandServer(MongoDatabase db, Document command) {
+        DBObject dbObject = null;
+        try {
+            dbObject = (DBObject) JSON.parse(db.runCommand(command).toJson());
+            /*if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
+                logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
+            }*/
+        } catch (MongoCommandException e) {
+            logger.error("Error while executing " + command + " for db " + db, e);
+        }
+        return dbObject;
+    }
+
+    private void fetchAndPrintServerStats(MongoDatabase adminDB, List<String> serverStatusExcludeMetricCategories) {
+        Document commandJson = new Document();
+        commandJson.append("serverStatus", 1);
+        for (String suppressCategory : serverStatusExcludeMetricCategories) {
+            commandJson.append(suppressCategory, 0);
+        }
+        DBObject serverStats = executeMongoCommandServer(adminDB, commandJson);
         printServerStats(serverStats);
     }
 
@@ -324,6 +332,9 @@ public class MongoDBMonitor extends AManagedMonitor {
      */
     public void printMetric(String metricName, Number metricValue) {
         if (metricValue != null) {
+            if(metricName.contains(",")) {
+                metricName = metricName.replaceAll(",", ":");
+            }
             try {
                 MetricWriter metricWriter = getMetricWriter(metricName,
                         MetricWriter.METRIC_AGGREGATION_TYPE_AVERAGE,
@@ -332,7 +343,7 @@ public class MongoDBMonitor extends AManagedMonitor {
                 );
                 metricWriter.printMetric(MetricUtils.toWholeNumberString(metricValue));
             } catch (Exception e) {
-                logger.error(e);
+                logger.error("Exception while reporting metric " + metricName + " : " + metricValue, e);
             }
         } else {
             logger.warn("Metric " + metricName + " is null");
@@ -382,6 +393,11 @@ public class MongoDBMonitor extends AManagedMonitor {
             configFileName = jarPath + File.separator + filename;
         }
         return configFileName;
+    }
+
+    private String logVersion() {
+        String msg = String.format("Using Monitor Version [%s]", getImplementationVersion());
+        return msg;
     }
 
     public static String getImplementationVersion() {

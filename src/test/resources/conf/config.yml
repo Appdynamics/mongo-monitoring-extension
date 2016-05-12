@@ -1,6 +1,6 @@
 # MongoDB host and port. If ReplicaSet is enabled, configure all or subset of members of the cluster.
 servers:
-  - host: "localhost"
+  - host: "192.168.0.102"
     port: 27017
 
 # Specify this key if Password Encryption Support is required. If not keep it empty
@@ -16,7 +16,6 @@ adminDBPassword: "admin"
 ssl: false
 pemFilePath: ""
 
-# https://docs.mongodb.com/manual/reference/command/serverStatus/
 serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, metrics]
 
 #prefix used to show up metrics in AppDynamics

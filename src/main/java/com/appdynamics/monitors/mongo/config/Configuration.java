@@ -1,5 +1,7 @@
 package com.appdynamics.monitors.mongo.config;
 
+import java.util.List;
+
 /**
  * Created by balakrishnav on 18/5/15.
  */
@@ -12,6 +14,8 @@ public class Configuration {
 
     private boolean ssl;
     private String pemFilePath;
+
+    private List<String> serverStatusExcludeMetricFields;
     private String metricPathPrefix;
 
     public Server[] getServers() {
@@ -68,5 +72,13 @@ public class Configuration {
 
     public void setMetricPathPrefix(String metricPathPrefix) {
         this.metricPathPrefix = metricPathPrefix;
+    }
+
+    public List<String> getServerStatusExcludeMetricFields() {
+        return serverStatusExcludeMetricFields;
+    }
+
+    public void setServerStatusExcludeMetricFields(List<String> serverStatusExcludeMetricFields) {
+        this.serverStatusExcludeMetricFields = serverStatusExcludeMetricFields;
     }
 }
