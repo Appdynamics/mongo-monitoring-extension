@@ -57,9 +57,14 @@ Note : Please make sure to not use tab (\t) while editing yaml files. You may wa
         ssl: false
         pemFilePath: ""
 
+        # https://docs.mongodb.com/manual/reference/command/serverStatus/
+        serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, metrics]
+        
         #prefix used to show up metrics in AppDynamics
         metricPathPrefix:  "Custom Metrics|Mongo Server|"
-
+        #This will create it in specific Tier. Replace <TIER_ID>
+        #metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo Server|"
+        
    ```
    
 2. Configure the path to the config.yml file by editing the <task-arguments> in the monitor.xml file in the `<MACHINE_AGENT_HOME>/monitors/MongoMonitor/` directory. Below is the sample

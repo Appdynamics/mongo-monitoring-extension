@@ -21,3 +21,5 @@ serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, m
 
 #prefix used to show up metrics in AppDynamics
 metricPathPrefix:  "Custom Metrics|Mongo Server|"
+#This will create it in specific Tier. Replace <TIER_ID>
+#metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo Server|"

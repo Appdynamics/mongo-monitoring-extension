@@ -199,20 +199,7 @@ public class MongoDBMonitor extends AManagedMonitor {
         return CryptoUtil.getPassword(argsForDecryption);
     }
 
-    private DBObject executeMongoCommand(MongoDatabase db, String command) {
-        DBObject dbObject = null;
-        try {
-            dbObject = (DBObject) JSON.parse(db.runCommand(new Document(command, 1)).toJson());
-            /*if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
-                logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
-            }*/
-        } catch (MongoCommandException e) {
-            logger.error("Error while executing " + command + " for db " + db, e);
-        }
-        return dbObject;
-    }
-
-    private DBObject executeMongoCommandServer(MongoDatabase db, Document command) {
+    private DBObject executeMongoCommand(MongoDatabase db, Document command) {
         DBObject dbObject = null;
         try {
             dbObject = (DBObject) JSON.parse(db.runCommand(command).toJson());
@@ -231,13 +218,15 @@ public class MongoDBMonitor extends AManagedMonitor {
         for (String suppressCategory : serverStatusExcludeMetricCategories) {
             commandJson.append(suppressCategory, 0);
         }
-        DBObject serverStats = executeMongoCommandServer(adminDB, commandJson);
+        DBObject serverStats = executeMongoCommand(adminDB, commandJson);
         printServerStats(serverStats);
     }
 
     private void fetchAndPrintReplicaSetStats(MongoDatabase adminDB) {
         if(mongoClient.getReplicaSetStatus() != null) {
-            DBObject replicaStats = executeMongoCommand(adminDB, "replSetGetStatus");
+            Document commandJson = new Document();
+            commandJson.append("replSetGetStatus", 1);
+            DBObject replicaStats = executeMongoCommand(adminDB, commandJson);
             printReplicaStats(replicaStats);
         } else {
             logger.info("not running with --replSet, skipping replicaset stats");
@@ -245,9 +234,11 @@ public class MongoDBMonitor extends AManagedMonitor {
     }
 
     private void fetchAndPrintDBStats() {
+        Document commandJson = new Document();
+        commandJson.append("dbStats", 1);
         for(String databaseName: mongoClient.listDatabaseNames()) {
             MongoDatabase db = mongoClient.getDatabase(databaseName);
-            DBObject dbStats = executeMongoCommand(db, "dbStats");
+            DBObject dbStats = executeMongoCommand(db, commandJson);
             printDBStats(dbStats);
         }
     }
@@ -342,6 +333,7 @@ public class MongoDBMonitor extends AManagedMonitor {
                         MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
                 );
                 metricWriter.printMetric(MetricUtils.toWholeNumberString(metricValue));
+
             } catch (Exception e) {
                 logger.error("Exception while reporting metric " + metricName + " : " + metricValue, e);
             }
