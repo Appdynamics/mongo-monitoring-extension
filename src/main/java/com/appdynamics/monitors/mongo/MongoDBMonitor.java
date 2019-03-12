@@ -7,9 +7,10 @@
 
 package com.appdynamics.monitors.mongo;
 
-import com.appdynamics.extensions.PathResolver;
+import com.appdynamics.extensions.ABaseMonitor;
+import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.crypto.CryptoUtil;
-import com.appdynamics.extensions.util.MetricUtils;
+import com.appdynamics.extensions.util.AssertUtils;
 import com.appdynamics.extensions.yml.YmlReader;
 import com.appdynamics.monitors.mongo.config.Configuration;
 import com.appdynamics.monitors.mongo.config.Server;
@@ -40,6 +41,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.X509Certificate;
@@ -48,9 +50,65 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class MongoDBMonitor extends AManagedMonitor {
+import static com.appdynamics.monitors.mongo.utils.Constants.*;
+import static com.appdynamics.monitors.mongo.utils.MongoUtils.convertToString;
+
+public class MongoDBMonitor extends ABaseMonitor {
 
     private static final Logger logger = LoggerFactory.getLogger(MongoDBMonitor.class);
+
+    @Override
+    protected String getDefaultMetricPrefix() {
+        return CUSTOMMETRICS + METRICS_SEPARATOR + MONITORNAME;
+    }
+
+    @Override
+    public String getMonitorName() {
+        return MONITORNAME;
+    }
+
+    @Override
+    protected int getTaskCount() {
+        List<Map<String, String>> servers = (List<Map<String, String>>) getContextConfiguration().getConfigYml().get(SERVERS);
+        AssertUtils.assertNotNull(servers, "The 'servers' section in config.yml is not initialised");
+        return servers.size();
+    }
+
+    @Override
+    protected void doRun(TasksExecutionServiceProvider taskExecutor) {
+        Map<String, ?> config = getContextConfiguration().getConfigYml();
+        if (config != null) {
+            List<Map> servers = (List) config.get(SERVERS);
+            AssertUtils.assertNotNull(servers, "The 'servers' section in config.yml is not initialised");
+            if (servers != null && !servers.isEmpty()) {
+                for (Map server : servers) {
+                    try {
+                        MongoDBMonitorTask task = createTask(server, taskExecutor);
+                        taskExecutor.submit((String) server.get(NAME), task);
+                    } catch (IOException e) {
+                        logger.error("Cannot construct JMX uri for {}", convertToString(server.get(DISPLAY_NAME), ""));
+                    }
+                }
+            } else {
+                logger.error("There are no servers configured");
+            }
+        } else {
+            logger.error("The config.yml is not loaded due to previous errors.The task will not run");
+        }
+    }
+
+
+
+    private MongoDBMonitorTask createTask(Map server, TasksExecutionServiceProvider taskExecutor) throws IOException {
+
+        return new MongoDBMonitorTask();
+
+    }
+
+
+
+    ////////// OLD STUFF
+
     public static final String CONFIG_ARG = "config-file";
 
     private static final String ADMIN_DB = "admin";
