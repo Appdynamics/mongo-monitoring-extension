@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.appdynamics.extensions.crypto.CryptoUtil.getPassword;
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
 import static com.appdynamics.monitors.mongo.utils.MongoUtils.convertToString;
 
@@ -101,8 +102,13 @@ public class MongoDBMonitor extends ABaseMonitor {
 
     private MongoDBMonitorTask createTask(Map server, TasksExecutionServiceProvider taskExecutor) throws IOException {
 
-        return new MongoDBMonitorTask();
 
+        return new MongoDBMonitorTask.Builder()
+                .metricPrefix(metricPathPrefix)
+                .metricWriter(taskExecutor.getMetricWriteHelper())
+                .server(server)
+                .monitorConfiguration(getContextConfiguration())
+                .build();
     }
 
 
@@ -124,11 +130,6 @@ public class MongoDBMonitor extends ABaseMonitor {
         System.out.println(logVersion());
     }
 
-    /**
-     * Main execution method that uploads the metrics to the AppDynamics Controller
-     *
-     * @see com.singularity.ee.agent.systemagent.api.ITask#execute(java.util.Map, com.singularity.ee.agent.systemagent.api.TaskExecutionContext)
-     */
     public TaskOutput execute(Map<String, String> taskArgs, TaskExecutionContext arg1)
             throws TaskExecutionException {
         if (taskArgs != null) {
@@ -146,7 +147,7 @@ public class MongoDBMonitor extends ABaseMonitor {
                 fetchAndPrintServerStats(adminDB, config.getServerStatusExcludeMetricFields());
                 fetchAndPrintReplicaSetStats(adminDB);
                 fetchAndPrintDBStats();
-                //fetchAndPrintCollectionStats();
+                fetchAndPrintCollectionStats();
 
                 logger.info("Mongo Monitoring Task completed successfully");
                 return new TaskOutput("Mongo Monitoring Task completed successfully");
@@ -245,7 +246,7 @@ public class MongoDBMonitor extends ABaseMonitor {
         Map<String, String> argsForDecryption = new HashMap<String, String>();
         argsForDecryption.put(PASSWORD_ENCRYPTED, encryptedPassword);
         argsForDecryption.put(ENCRYPTION_KEY, encryptionKey);
-        return CryptoUtil.getPassword(argsForDecryption);
+        return getPassword(argsForDecryption);
     }
 
     private DBObject executeMongoCommand(MongoDatabase db, Document command) {
