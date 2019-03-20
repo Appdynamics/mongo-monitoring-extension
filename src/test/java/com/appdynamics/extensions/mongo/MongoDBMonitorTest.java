@@ -22,7 +22,7 @@ public class MongoDBMonitorTest {
     @Test
     public void testMongoDBMonitor() throws TaskExecutionException {
         Map<String, String> taskArgs = new HashMap<String, String>();
-        taskArgs.put("config-file", "src/test/resources/conf/config.yml");
+        taskArgs.put("config-file", "src/test/resources/conf/config_old.yml");
 
         MongoDBMonitor monitor = new MongoDBMonitor();
         monitor.execute(taskArgs, null);

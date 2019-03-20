@@ -97,7 +97,7 @@ public class OldMonitor {
             MongoCredential adminDBCredential = MongoCredential.createCredential(config.getAdminDBUsername(), ADMIN_DB, getAdminDBPassword(config).toCharArray());
             credentials.add(adminDBCredential);
         } else {
-            logger.info("adminDBUsername and adminDBPassword in config.yml is null or empty");
+            logger.info("adminDBUsername and adminDBPassword in config_old.yml is null or empty");
         }
         return credentials;
     }
@@ -114,7 +114,7 @@ public class OldMonitor {
                     throw new MongoMonitorException("Error establishing ssl socket factory");
                 }
             } else {
-                String msg = "The argument pemFilePath is null or empty in config.yml";
+                String msg = "The argument pemFilePath is null or empty in config_old.yml";
                 logger.error(msg);
                 throw new MongoMonitorException(msg);
             }
