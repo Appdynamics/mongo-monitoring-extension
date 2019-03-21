@@ -101,7 +101,7 @@ public class OldMonitor {
 
     private List<MongoCredential> getMongoCredentials(Configuration config) {
         List<MongoCredential> credentials = Lists.newArrayList();
-        if(!Strings.isNullOrEmpty(config.getAdminDBUsername()) && !Strings.isNullOrEmpty(config.getAdminDBPassword())) {
+        if (!Strings.isNullOrEmpty(config.getAdminDBUsername()) && !Strings.isNullOrEmpty(config.getAdminDBPassword())) {
             MongoCredential adminDBCredential = MongoCredential.createCredential(config.getAdminDBUsername(), ADMIN_DB, getAdminDBPassword(config).toCharArray());
             credentials.add(adminDBCredential);
         } else {
@@ -135,11 +135,11 @@ public class OldMonitor {
         for (Server server : config.getServers()) {
             seeds.add(new ServerAddress(server.getHost(), server.getPort()));
         }
-        if(options == null && credentials.size() == 0) {
+        if (options == null && credentials.size() == 0) {
             mongoClient = new MongoClient(seeds);
-        } else if(options == null && credentials.size() > 0) {
+        } else if (options == null && credentials.size() > 0) {
             mongoClient = new MongoClient(seeds, credentials);
-        } else if(options != null && credentials.size() == 0) {
+        } else if (options != null && credentials.size() == 0) {
             mongoClient = new MongoClient(seeds, options);
         } else {
             mongoClient = new MongoClient(seeds, credentials, options);
@@ -210,7 +210,7 @@ public class OldMonitor {
     }
 
     private void fetchAndPrintReplicaSetStats(MongoDatabase adminDB) {
-        if(mongoClient.getReplicaSetStatus() != null) {
+        if (mongoClient.getReplicaSetStatus() != null) {
             Document commandJson = new Document();
             commandJson.append("replSetGetStatus", 1);
             DBObject replicaStats = executeMongoCommand(adminDB, commandJson);
@@ -223,7 +223,7 @@ public class OldMonitor {
     private void fetchAndPrintDBStats() {
         Document commandJson = new Document();
         commandJson.append("dbStats", 1);
-        for(String databaseName: mongoClient.listDatabaseNames()) {
+        for (String databaseName : mongoClient.listDatabaseNames()) {
             MongoDatabase db = mongoClient.getDatabase(databaseName);
             DBObject dbStats = executeMongoCommand(db, commandJson);
             printDBStats(dbStats);
@@ -231,7 +231,7 @@ public class OldMonitor {
     }
 
     private void fetchAndPrintCollectionStats() {
-        for(String databaseName: mongoClient.listDatabaseNames()) {
+        for (String databaseName : mongoClient.listDatabaseNames()) {
             DB db = mongoClient.getDB(databaseName);
             Set<String> collectionNames = db.getCollectionNames();
             if (collectionNames != null && collectionNames.size() > 0) {
@@ -254,7 +254,7 @@ public class OldMonitor {
     }
 
     private void printServerStats(DBObject serverStats) {
-        if(serverStats != null) {
+        if (serverStats != null) {
             String metricPath = getServerStatsMetricPrefix();
             printNumericMetricsFromMap(serverStats.toMap(), metricPath);
         }
@@ -264,7 +264,7 @@ public class OldMonitor {
         if (replicaStats != null) {
             String replicaStatsPath = getReplicaStatsMetricPrefix();
             BasicDBList members = (BasicDBList) replicaStats.get("members");
-            for(int i = 0; i < members.size(); i++) {
+            for (int i = 0; i < members.size(); i++) {
                 DBObject member = (DBObject) members.get(i);
                 printMetric(replicaStatsPath + member.get("name") + METRIC_SEPARATOR + "Health", (Number) member.get("health"));
                 printMetric(replicaStatsPath + member.get("name") + METRIC_SEPARATOR + "State", (Number) member.get("state"));
@@ -295,7 +295,7 @@ public class OldMonitor {
                 // Map found, digging further
                 printNumericMetricsFromMap((Map<String, Object>) entry.getValue(), metricPath + entry.getKey() + METRIC_SEPARATOR);
             } else {
-                if(entry.getValue() instanceof Number) {
+                if (entry.getValue() instanceof Number) {
                     printMetric(metricPath + entry.getKey(), (Number) entry.getValue());
                 }
             }
@@ -309,24 +309,24 @@ public class OldMonitor {
      * @param metricValue Value of the Metric
      */
     public void printMetric(String metricName, Number metricValue) {
-        if (metricValue != null) {
-            if(metricName.contains(",")) {
-                metricName = metricName.replaceAll(",", ":");
-            }
-            try {
-                MetricWriter metricWriter = getMetricWriter(metricName,
-                        MetricWriter.METRIC_AGGREGATION_TYPE_AVERAGE,
-                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
-                );
-                metricWriter.printMetric(MetricUtils.toWholeNumberString(metricValue));
-
-            } catch (Exception e) {
-                logger.error("Exception while reporting metric " + metricName + " : " + metricValue, e);
-            }
-        } else {
-            logger.warn("Metric " + metricName + " is null");
-        }
+//        if (metricValue != null) {
+//            if (metricName.contains(",")) {
+//                metricName = metricName.replaceAll(",", ":");
+//            }
+//            try {
+//                MetricWriter metricWriter = getMetricWriter(metricName,
+//                        MetricWriter.METRIC_AGGREGATION_TYPE_AVERAGE,
+//                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+//                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
+//                );
+//                metricWriter.printMetric(MetricUtils.toWholeNumberString(metricValue));
+//
+//            } catch (Exception e) {
+//                logger.error("Exception while reporting metric " + metricName + " : " + metricValue, e);
+//            }
+//        } else {
+//            logger.warn("Metric " + metricName + " is null");
+//        }
     }
 
     private String getMetricPathPrefix() {

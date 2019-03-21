@@ -33,6 +33,9 @@ import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 
+import static com.appdynamics.monitors.mongo.utils.Constants.PEM_FILE_PATH;
+import static com.appdynamics.monitors.mongo.utils.Constants.SSL_ENABLED;
+
 /**
  * Created by bhuvnesh.kumar on 3/19/19.
  */
@@ -42,12 +45,12 @@ public class MongoClientSSLOptions {
     public static MongoClientOptions getMongoClientSSLOptions(Map config) throws MongoMonitorException {
         MongoClientOptions clientOpts = null;
         Boolean ssl = false;
-        if (config.get("ssl") != null) {
-            ssl = (Boolean) config.get("ssl");
+        if (config.get(SSL_ENABLED) != null) {
+            ssl = (Boolean) config.get(SSL_ENABLED);
         }
         if (ssl) {
-            if (config.get("pemFilePath") != null) {
-                String filePath = config.get("pemFilePath").toString();
+            if (config.get(PEM_FILE_PATH) != null) {
+                String filePath = config.get(PEM_FILE_PATH).toString();
                 if (!Strings.isNullOrEmpty(filePath)) {
                     try {
                         clientOpts = new MongoClientOptions.Builder().socketFactory(getSocketFactoryFromPEM(filePath)).build();

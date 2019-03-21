@@ -25,8 +25,10 @@ public class Constants {
     public static final String MONITORNAME = "Mongo Server";
     public static final String NAME = "name";
     public static final String PASSWORD = "password";
+    public static final String PEM_FILE_PATH = "pemFilePath";
     public static final String PORT = "port";
     public static final String SERVERS = "servers";
+    public static final String SSL_ENABLED = "sslEnabled";
     public static final String USERNAME = "username";
 
 }

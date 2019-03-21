@@ -11,18 +11,10 @@ package com.appdynamics.monitors.mongo;
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
-import com.appdynamics.monitors.mongo.config.Configuration;
-import com.appdynamics.monitors.mongo.config.Server;
-import com.appdynamics.monitors.mongo.exception.MongoMonitorException;
-import com.google.common.collect.Lists;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Map;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
@@ -37,7 +29,6 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     private String metricPrefix;
     private MetricWriteHelper metricWriter;
     private Map server;
-    private Map<String, String> credentials;
     private MongoClient mongoClient;
 
     private MonitorContextConfiguration monitorContextConfiguration;
@@ -49,7 +40,6 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
         String portStr = convertToString(server.get(PORT), EMPTY_STRING);
         int port = (portStr == null || portStr == EMPTY_STRING) ? -1 : Integer.parseInt(portStr);
     }
-
 
 
     /////////////////
@@ -78,11 +68,6 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
 
         Builder server(Map server) {
             task.server = server;
-            return this;
-        }
-
-        Builder credentials(Map credentials) {
-            task.credentials = credentials;
             return this;
         }
 

@@ -11,25 +11,15 @@ package com.appdynamics.monitors.mongo;
 import com.appdynamics.extensions.ABaseMonitor;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.util.AssertUtils;
-import com.appdynamics.monitors.mongo.config.Server;
-import com.appdynamics.monitors.mongo.exception.MongoMonitorException;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
+import com.appdynamics.monitors.mongo.utils.MongoClientGenerator;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
-import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
-import static com.appdynamics.extensions.crypto.CryptoUtil.getPassword;
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
 import static com.appdynamics.monitors.mongo.utils.MongoUtils.convertToString;
 
@@ -59,6 +49,7 @@ public class MongoDBMonitor extends ABaseMonitor {
         Map<String, ?> config = getContextConfiguration().getConfigYml();
         if (config != null) {
             List<Map> servers = (List) config.get(SERVERS);
+            MongoClient mongoClient = MongoClientGenerator.getMongoClient(servers, getContextConfiguration().getConfigYml());
             AssertUtils.assertNotNull(servers, "The 'servers' section in config_old.yml is not initialised");
             if (servers != null && !servers.isEmpty()) {
                 for (Map server : servers) {
@@ -77,112 +68,10 @@ public class MongoDBMonitor extends ABaseMonitor {
         }
     }
 
-    private void buildMongoClient(List servers) {
-//        String host = convertToString(server.get(HOST), EMPTY_STRING);
-//        String portStr = convertToString(server.get(PORT), EMPTY_STRING);
-//        int port = (portStr == null || portStr == EMPTY_STRING) ? -1 : Integer.parseInt(portStr);
-        List<MongoCredential> credentials = getMongoCredentials(getCredentials());
-        try {
-            MongoClientOptions clientSSLOptions = MongoClientSSLOptions.getMongoClientSSLOptions(getContextConfiguration().getConfigYml());
-            MongoCredential credential = getMongoCredential((Map<String, String>)getCredentials());
-            MongoClient mongoClient = buildMongoClient(credential, clientSSLOptions, servers);
-            MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
-
-        } catch (MongoMonitorException e) {
-            logger.error("Error in building the MongoClient", e);
-        }
-    }
-
-
-    private MongoClient buildMongoClient( List<MongoCredential> credentials, MongoClientOptions options, List<Map> servers) {
-
-        MongoClient mongoClient ;
-        List<ServerAddress> seeds = Lists.newArrayList();
-        for (Map server : servers) {
-            seeds.add(new ServerAddress(server.get(HOST).toString(), (Integer) server.get(PORT)));
-        }
-        if(options == null && credentials.size() == 0) {
-            mongoClient = new MongoClient(seeds);
-        } else if(options != null && credentials.size() == 0) {
-            mongoClient = new MongoClient(seeds, options);
-        } else if(options == null && credentials.size() > 0) {
-            mongoClient = new MongoClient(seeds, credentials);
-        } else {
-            mongoClient = new MongoClient(seeds, credentials, options);
-        }
-        return mongoClient;
-    }
-
-
-
-    private List<MongoCredential> getMongoCredentials(Map<String, String> credentials) {
-        List<MongoCredential> mongoCredentials = Lists.newArrayList();
-        if (credentials.get("username") != null && credentials.get("password") != null) {
-            MongoCredential adminDBCredential = MongoCredential.createCredential(credentials.get("username"), ADMIN_DB, credentials.get("password").toCharArray());
-            mongoCredentials.add(adminDBCredential);
-        } else {
-            logger.info("adminDBUsername and adminDBPassword in config_old.yml is null or empty");
-        }
-        return mongoCredentials;
-    }
-
-    private MongoCredential getMongoCredential(Map<String, String> credentials) {
-        MongoCredential adminDBCredential = null;
-        if (credentials.get(USERNAME) != null && credentials.get(PASSWORD) != null) {
-             adminDBCredential = MongoCredential.createCredential(credentials.get(USERNAME), ADMIN_DB, credentials.get(PASSWORD).toCharArray());
-        } else {
-            logger.info("username and password in config are null or empty");
-        }
-        return adminDBCredential;
-    }
-
-    private MongoClient buildMongoClient( MongoCredential credential, MongoClientOptions options, List<Map> servers) {
-
-        MongoClient mongoClient = null ;
-        List<ServerAddress> seeds = Lists.newArrayList();
-        for (Map server : servers) {
-            seeds.add(new ServerAddress(server.get(HOST).toString(), (Integer) server.get(PORT)));
-        }
-        if(options == null && credential == null) {
-            mongoClient = new MongoClient(seeds);
-        } else if(options != null && credential == null) {
-            mongoClient = new MongoClient(seeds, options);
-        } else if(options == null && credential != null) {
-            // no such constructor
-//            mongoClient = new MongoClient(seeds, credential);
-        } else {
-            mongoClient = new MongoClient(seeds, credential, options);
-        }
-        return mongoClient;
-    }
-
-    private Map getCredentials() {
-        Map<String, String> credentials = new HashMap<String, String>();
-
-        if (!Strings.isNullOrEmpty(getContextConfiguration().getConfigYml().get(USERNAME).toString())) {
-            credentials.put(USERNAME, getContextConfiguration().getConfigYml().get(USERNAME).toString());
-        }
-        if (!Strings.isNullOrEmpty(getContextConfiguration().getConfigYml().get(PASSWORD).toString())) {
-            credentials.put(PASSWORD, getContextConfiguration().getConfigYml().get(PASSWORD).toString());
-        }
-        if (!Strings.isNullOrEmpty(getContextConfiguration().getConfigYml().get(ENCRYPTED_PASSWORD).toString())) {
-            credentials.put(ENCRYPTED_PASSWORD, getContextConfiguration().getConfigYml().get(ENCRYPTED_PASSWORD).toString());
-        }
-        if (!Strings.isNullOrEmpty(getContextConfiguration().getConfigYml().get(ENCRYPTION_KEY).toString())) {
-            credentials.put(ENCRYPTION_KEY, getContextConfiguration().getConfigYml().get(ENCRYPTION_KEY).toString());
-        }
-        String password = getPassword(credentials);
-        credentials.remove(ENCRYPTION_KEY);
-        credentials.remove(ENCRYPTED_PASSWORD);
-        credentials.put(PASSWORD, password);
-        return credentials;
-    }
-
     private MongoDBMonitorTask createTask(Map server, TasksExecutionServiceProvider taskExecutor) throws IOException {
         return new MongoDBMonitorTask.Builder()
                 .metricWriter(taskExecutor.getMetricWriteHelper())
                 .server(server)
-                .credentials(getCredentials())
                 .monitorConfiguration(getContextConfiguration())
                 .build();
     }
@@ -199,7 +88,7 @@ public class MongoDBMonitor extends ABaseMonitor {
 //    public static final String METRIC_SEPARATOR = "|";
 //
 //    private String metricPathPrefix;
-//    private MongoClient mongoClient;
+//    private MongoClientGenerator mongoClient;
 //
 //    public MongoDBMonitor() {
 //        System.out.println(logVersion());
@@ -268,19 +157,19 @@ public class MongoDBMonitor extends ABaseMonitor {
 //        return clientOpts;
 //    }
 //
-//    private MongoClient buildMongoClient(Configuration config, List<MongoCredential> credentials, MongoClientOptions options) {
+//    private MongoClientGenerator buildMongoClient(Configuration config, List<MongoCredential> credentials, MongoClientOptions options) {
 //        List<ServerAddress> seeds = Lists.newArrayList();
 //        for (Server server : config.getServers()) {
 //            seeds.add(new ServerAddress(server.getHost(), server.getPort()));
 //        }
 //        if(options == null && credentials.size() == 0) {
-//            mongoClient = new MongoClient(seeds);
+//            mongoClient = new MongoClientGenerator(seeds);
 //        } else if(options == null && credentials.size() > 0) {
-//            mongoClient = new MongoClient(seeds, credentials);
+//            mongoClient = new MongoClientGenerator(seeds, credentials);
 //        } else if(options != null && credentials.size() == 0) {
-//            mongoClient = new MongoClient(seeds, options);
+//            mongoClient = new MongoClientGenerator(seeds, options);
 //        } else {
-//            mongoClient = new MongoClient(seeds, credentials, options);
+//            mongoClient = new MongoClientGenerator(seeds, credentials, options);
 //        }
 //        return mongoClient;
 //    }
