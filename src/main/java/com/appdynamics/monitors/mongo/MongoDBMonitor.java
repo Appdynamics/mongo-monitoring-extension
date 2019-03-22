@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
-import static com.appdynamics.monitors.mongo.utils.MongoUtils.convertToString;
 
 public class MongoDBMonitor extends ABaseMonitor {
 
@@ -49,30 +48,29 @@ public class MongoDBMonitor extends ABaseMonitor {
         Map<String, ?> config = getContextConfiguration().getConfigYml();
         if (config != null) {
             List<Map> servers = (List) config.get(SERVERS);
-            MongoClient mongoClient = MongoClientGenerator.getMongoClient(servers, getContextConfiguration().getConfigYml());
-            AssertUtils.assertNotNull(servers, "The 'servers' section in config_old.yml is not initialised");
+            AssertUtils.assertNotNull(servers, "The 'servers' section in config.yml is not initialised");
             if (servers != null && !servers.isEmpty()) {
-                for (Map server : servers) {
-                    try {
-                        MongoDBMonitorTask task = createTask(server, taskExecutor);
-                        taskExecutor.submit((String) server.get(NAME), task);
-                    } catch (IOException e) {
-                        logger.error("Cannot construct JMX uri for {}", convertToString(server.get(DISPLAY_NAME), ""));
-                    }
+                MongoClient mongoClient = MongoClientGenerator.getMongoClient(servers, getContextConfiguration().getConfigYml());
+                try {
+                    MongoDBMonitorTask task = createTask(mongoClient, taskExecutor, getContextConfiguration().getConfigYml());
+                    taskExecutor.submit("MongoDB", task);
+                } catch (IOException e) {
+                    logger.error("Cannot construct MongoClient uri for MongoDB");
                 }
             } else {
                 logger.error("There are no servers configured");
             }
         } else {
-            logger.error("The config_old.yml is not loaded due to previous errors.The task will not run");
+            logger.error("The config.yml is not loaded due to previous errors.The task will not run");
         }
     }
 
-    private MongoDBMonitorTask createTask(Map server, TasksExecutionServiceProvider taskExecutor) throws IOException {
+    private MongoDBMonitorTask createTask(MongoClient mongoClient, TasksExecutionServiceProvider taskExecutor, Map config) throws IOException {
         return new MongoDBMonitorTask.Builder()
+                .mongoClient(mongoClient)
                 .metricWriter(taskExecutor.getMetricWriteHelper())
-                .server(server)
                 .monitorConfiguration(getContextConfiguration())
+                .config(config)
                 .build();
     }
 

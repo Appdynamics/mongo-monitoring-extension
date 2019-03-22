@@ -34,7 +34,7 @@ public class MongoClientGenerator {
     private static final Logger logger = LoggerFactory.getLogger(MongoClientGenerator.class);
 
     public static MongoClient getMongoClient(List servers, Map config) {
-        com.mongodb.MongoClient mongoClient = null;
+        MongoClient mongoClient = null;
         try {
             MongoClientOptions clientSSLOptions = MongoClientSSLOptions.getMongoClientSSLOptions(config);
             MongoCredential credential = getMongoCredentials((Map<String, String>) getCredentials(config));
@@ -56,20 +56,20 @@ public class MongoClientGenerator {
 
     private static MongoClient buildMongoClient(MongoCredential credential, MongoClientOptions options, List<Map> servers) {
 
-        com.mongodb.MongoClient mongoClient = null;
+        MongoClient mongoClient = null;
         List<ServerAddress> seeds = Lists.newArrayList();
         for (Map server : servers) {
             seeds.add(new ServerAddress(server.get(HOST).toString(), (Integer) server.get(PORT)));
         }
         if (options == null && credential == null) {
-            mongoClient = new com.mongodb.MongoClient(seeds);
+            mongoClient = new MongoClient(seeds);
         } else if (options != null && credential == null) {
-            mongoClient = new com.mongodb.MongoClient(seeds, options);
+            mongoClient = new MongoClient(seeds, options);
         } else if (options == null && credential != null) {
             // no such constructor
 //            mongoClient = new MongoClientGenerator(seeds, credential);
         } else {
-            mongoClient = new com.mongodb.MongoClient(seeds, credential, options);
+            mongoClient = new MongoClient(seeds, credential, options);
         }
         return mongoClient;
     }

@@ -11,14 +11,18 @@ package com.appdynamics.monitors.mongo;
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.monitors.mongo.stats.ReplicaStats;
+import com.appdynamics.monitors.mongo.stats.ServerStats;
 import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
-import static com.appdynamics.monitors.mongo.utils.MongoUtils.convertToString;
 
 /**
  * Created by bhuvnesh.kumar on 3/12/19.
@@ -26,35 +30,46 @@ import static com.appdynamics.monitors.mongo.utils.MongoUtils.convertToString;
 public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     private static final Logger logger = LoggerFactory.getLogger(MongoDBMonitorTask.class);
     private Boolean status = true;
+    private Map config;
     private String metricPrefix;
-    private MetricWriteHelper metricWriter;
-    private Map server;
     private MongoClient mongoClient;
+    private MetricWriteHelper metricWriter;
 
     private MonitorContextConfiguration monitorContextConfiguration;
 
     public void run() {
 
+
         metricPrefix = monitorContextConfiguration.getMetricPrefix();
-        String host = convertToString(server.get(HOST), EMPTY_STRING);
-        String portStr = convertToString(server.get(PORT), EMPTY_STRING);
-        int port = (portStr == null || portStr == EMPTY_STRING) ? -1 : Integer.parseInt(portStr);
+        MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
+        List<Metric> serverStats = ServerStats.fetchAndPrintServerStats(adminDB, getServerStatusExcludeMetricFields(), metricPrefix);
+
+        List<Metric> replicaStats = ReplicaStats.fetchAndPrintReplicaSetStats(adminDB, mongoClient, metricPrefix);
+
     }
 
 
     /////////////////
     /////////////////
 
+
     /////////////////
     /////////////////
 
+    private List<String> getServerStatusExcludeMetricFields() {
+        if (config.get("serverStatusExcludeMetricFields") != null) {
+            return (List<String>) config.get("serverStatusExcludeMetricFields");
+        } else {
+            return null;
+        }
+    }
 
     public void onTaskComplete() {
         logger.debug("Task Complete");
         if (status == true) {
-            metricWriter.printMetric(metricPrefix + METRICS_SEPARATOR + server.get(DISPLAY_NAME).toString() + METRICS_SEPARATOR + AVAILABILITY, "1", "AVERAGE", "AVERAGE", "INDIVIDUAL");
+            metricWriter.printMetric(metricPrefix + METRICS_SEPARATOR + "MongoDB" + METRICS_SEPARATOR + AVAILABILITY, "1", "AVERAGE", "AVERAGE", "INDIVIDUAL");
         } else {
-            metricWriter.printMetric(metricPrefix + METRICS_SEPARATOR + server.get(DISPLAY_NAME).toString() + METRICS_SEPARATOR + AVAILABILITY, "0", "AVERAGE", "AVERAGE", "INDIVIDUAL");
+            metricWriter.printMetric(metricPrefix + METRICS_SEPARATOR + "MongoDB" + METRICS_SEPARATOR + AVAILABILITY, "0", "AVERAGE", "AVERAGE", "INDIVIDUAL");
         }
     }
 
@@ -66,8 +81,13 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
             return this;
         }
 
-        Builder server(Map server) {
-            task.server = server;
+        Builder mongoClient(MongoClient mongoClient) {
+            task.mongoClient = mongoClient;
+            return this;
+        }
+
+        Builder config(Map config) {
+            task.config = config;
             return this;
         }
 
