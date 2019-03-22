@@ -48,7 +48,7 @@ public class ServerStats {
 
 
     private static List<Metric> getServerStats(DBObject serverStats, String metricPrefix) {
-        String metricPath = getServerStatsMetricPrefix(getMetricPathPrefix(metricPrefix));
+        String metricPath = getServerStatsMetricPrefix(metricPrefix);
         return MetricPrintUtils.getNumericMetricsFromMap(serverStats.toMap(), metricPath);
     }
 

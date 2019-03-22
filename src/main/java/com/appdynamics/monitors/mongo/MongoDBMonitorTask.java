@@ -12,6 +12,8 @@ import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.monitors.mongo.stats.CollectionStats;
+import com.appdynamics.monitors.mongo.stats.DBStats;
 import com.appdynamics.monitors.mongo.stats.ReplicaStats;
 import com.appdynamics.monitors.mongo.stats.ServerStats;
 import com.mongodb.MongoClient;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
+import static com.appdynamics.monitors.mongo.utils.MetricPrintUtils.getMetricPathPrefix;
 
 /**
  * Created by bhuvnesh.kumar on 3/12/19.
@@ -39,22 +42,16 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
 
     public void run() {
 
-
-        metricPrefix = monitorContextConfiguration.getMetricPrefix();
+        metricPrefix = getMetricPathPrefix(monitorContextConfiguration.getMetricPrefix());
         MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
         List<Metric> serverStats = ServerStats.fetchAndPrintServerStats(adminDB, getServerStatusExcludeMetricFields(), metricPrefix);
 
         List<Metric> replicaStats = ReplicaStats.fetchAndPrintReplicaSetStats(adminDB, mongoClient, metricPrefix);
+        List<Metric> dbStats = DBStats.fetchDBStats(mongoClient, metricPrefix);
+        List<Metric> collectionStats = CollectionStats.fetchCollectionStats(mongoClient, metricPrefix);
 
     }
 
-
-    /////////////////
-    /////////////////
-
-
-    /////////////////
-    /////////////////
 
     private List<String> getServerStatusExcludeMetricFields() {
         if (config.get("serverStatusExcludeMetricFields") != null) {
