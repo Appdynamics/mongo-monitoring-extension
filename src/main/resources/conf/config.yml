@@ -9,6 +9,10 @@ servers:
     host: "localhost"
     port: 27017
 
+  - name: "Server 2"
+    host: "localhost"
+    port: 27018
+
 # Specify this key if Password Encryption Support is required. If not keep it empty
 # If specified, password and databases passwords are now the encrypted passwords.
 
@@ -23,10 +27,19 @@ password: "admin"
 encryptedPassword: ""
 encryptionKey: ""
 
-# Change ssl to true if mongod is started with ssl. Then specify the pemFilePath, if not keep empty.
-ssl: false
-pemFilePath: ""
 
 # https://docs.mongodb.com/manual/reference/command/serverStatus/
 serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, metrics]
+
+# Change ssl to true if mongod is started with ssl.
+useSsl: false
+
+# If you are using the connection section,
+# any change to the connection section below requires a machine agent restart for the changes to reflect
+connection:
+  socketTimeout: 3000
+  connectTimeout: 1000
+  sslTrustStorePath: '' #if [sslTrustStorePath]: '' empty, it defaults to <MachineAgent_Home>/conf/cacerts.jks
+  sslTrustStorePassword: '' # [sslTrustStorePassword: ""] defaults to ''
+  sslTrustStoreEncryptedPassword: '' #provide encrypted Password if encryption is needed
 

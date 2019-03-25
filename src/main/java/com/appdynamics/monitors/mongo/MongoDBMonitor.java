@@ -11,6 +11,7 @@ package com.appdynamics.monitors.mongo;
 import com.appdynamics.extensions.ABaseMonitor;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.util.AssertUtils;
+import com.appdynamics.monitors.mongo.connection.SslUtils;
 import com.appdynamics.monitors.mongo.utils.MongoClientGenerator;
 import com.mongodb.MongoClient;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ public class MongoDBMonitor extends ABaseMonitor {
     @Override
     protected void doRun(TasksExecutionServiceProvider taskExecutor) {
         Map<String, ?> config = getContextConfiguration().getConfigYml();
+        checkForSSL();
         if (config != null) {
             List<Map> servers = (List) config.get(SERVERS);
             AssertUtils.assertNotNull(servers, "The 'servers' section in config.yml is not initialised");
@@ -62,6 +64,13 @@ public class MongoDBMonitor extends ABaseMonitor {
             }
         } else {
             logger.error("The config.yml is not loaded due to previous errors.The task will not run");
+        }
+    }
+
+    private void checkForSSL() {
+        if ((Boolean) getContextConfiguration().getConfigYml().get(USE_SSL)) {
+            SslUtils sslUtils = new SslUtils();
+            sslUtils.setSslProperties(getContextConfiguration().getConfigYml());
         }
     }
 

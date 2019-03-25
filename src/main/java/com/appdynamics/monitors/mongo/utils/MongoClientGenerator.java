@@ -8,7 +8,7 @@
 
 package com.appdynamics.monitors.mongo.utils;
 
-import com.appdynamics.monitors.mongo.MongoClientSSLOptions;
+import com.appdynamics.monitors.mongo.connection.MongoClientSSLOptions;
 import com.appdynamics.monitors.mongo.exception.MongoMonitorException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
