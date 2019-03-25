@@ -8,10 +8,9 @@
 
 package com.appdynamics.monitors.mongo.utils;
 
-import com.mongodb.DBObject;
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.util.JSON;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,17 +28,16 @@ public class MongoUtils {
         return field.toString();
     }
 
-    public static DBObject executeMongoCommand(MongoDatabase db, Document command) {
-        DBObject dbObject = null;
+    public static BasicDBObject executeMongoCommand(MongoDatabase db, Document command) {
+
+        BasicDBObject basicDBObject = null;
         try {
-            dbObject = (DBObject) JSON.parse(db.runCommand(command).toJson());
-            /*if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
-                logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
-            }*/
+            basicDBObject = BasicDBObject.parse(db.runCommand(command).toJson());
+
         } catch (MongoCommandException e) {
             logger.error("Error while executing " + command + " for db " + db, e);
         }
-        return dbObject;
+        return basicDBObject;
     }
 
 }

@@ -9,7 +9,7 @@
 package com.appdynamics.monitors.mongo.stats;
 
 import com.appdynamics.extensions.metrics.Metric;
-import com.mongodb.DBObject;
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -32,13 +32,13 @@ public class DBStats {
         List<Metric> metrics = new ArrayList<Metric>();
         for (String databaseName : mongoClient.listDatabaseNames()) {
             MongoDatabase db = mongoClient.getDatabase(databaseName);
-            DBObject dbStats = executeMongoCommand(db, commandJson);
+            BasicDBObject dbStats = executeMongoCommand(db, commandJson);
             metrics.addAll(getDBStats(dbStats, metricPrefix));
         }
         return metrics;
     }
 
-    private static List<Metric> getDBStats(DBObject dbStats, String metricPrefix) {
+    private static List<Metric> getDBStats(BasicDBObject dbStats, String metricPrefix) {
         String dbStatsPath = getDBStatsMetricPrefix(dbStats.get("db").toString(), metricPrefix);
         return getNumericMetricsFromMap(dbStats.toMap(), dbStatsPath);
 

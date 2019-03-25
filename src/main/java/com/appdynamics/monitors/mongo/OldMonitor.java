@@ -8,51 +8,12 @@
 
 package com.appdynamics.monitors.mongo;
 
-import com.appdynamics.extensions.util.PathResolver;
-import com.appdynamics.extensions.yml.YmlReader;
-import com.appdynamics.monitors.mongo.config.Configuration;
-import com.appdynamics.monitors.mongo.config.Server;
-import com.appdynamics.monitors.mongo.exception.MongoMonitorException;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.mongodb.*;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.util.JSON;
-import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
-import com.singularity.ee.agent.systemagent.api.MetricWriter;
-import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
-import com.singularity.ee.agent.systemagent.api.TaskOutput;
-import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-import org.apache.commons.net.util.SSLContextUtils;
-import org.apache.commons.net.util.TrustManagerUtils;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bson.Document;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import java.io.File;
-import java.io.FileReader;
-import java.security.KeyStore;
-import java.security.Security;
-import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static com.appdynamics.extensions.crypto.CryptoUtil.getPassword;
-
 /**
  * Created by bhuvnesh.kumar on 3/14/19.
  */
 public class OldMonitor {
+
+    /*
 
     public static final String CONFIG_ARG = "config-file";
 
@@ -190,9 +151,9 @@ public class OldMonitor {
         DBObject dbObject = null;
         try {
             dbObject = (DBObject) JSON.parse(db.runCommand(command).toJson());
-            /*if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
+            if (dbStats != null && !dbStats.getOk().toString().equals(OK_RESPONSE)) {
                 logger.error("Error retrieving db stats. Invalid permissions set for this user.DB= " + db.getName());
-            }*/
+            }
         } catch (MongoCommandException e) {
             logger.error("Error while executing " + command + " for db " + db, e);
         }
@@ -301,13 +262,15 @@ public class OldMonitor {
             }
         }
     }
-
-    /**
+*/
+    /*
      * Returns the metric to the AppDynamics Controller.
      *
      * @param metricName  Name of the Metric
      * @param metricValue Value of the Metric
      */
+
+    /*
     public void printMetric(String metricName, Number metricValue) {
 //        if (metricValue != null) {
 //            if (metricName.contains(",")) {
@@ -336,11 +299,13 @@ public class OldMonitor {
         return metricPathPrefix;
     }
 
-    /**
+    /*
      * Metric Prefix
      *
      * @return String
      */
+
+    /*
     private String getServerStatsMetricPrefix() {
         return getMetricPathPrefix() + "Server Stats" + METRIC_SEPARATOR;
     }
@@ -378,5 +343,7 @@ public class OldMonitor {
 //        String msg = String.format("Using Monitor Version [%s]", getImplementationVersion());
         return "";
     }
+
+    */
 
 }

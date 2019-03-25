@@ -10,7 +10,7 @@ package com.appdynamics.monitors.mongo.stats;
 
 import com.appdynamics.extensions.metrics.Metric;
 import com.mongodb.BasicDBList;
-import com.mongodb.DBObject;
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -33,7 +33,7 @@ public class ReplicaStats {
         if (mongoClient.getReplicaSetStatus() != null) {
             Document commandJson = new Document();
             commandJson.append("replSetGetStatus", 1);
-            DBObject replicaStats = executeMongoCommand(adminDB, commandJson);
+            BasicDBObject replicaStats = executeMongoCommand(adminDB, commandJson);
             return getReplicaStats(replicaStats, metricPrefix);
         } else {
             logger.info("not running with --replSet, skipping replicaset stats");
@@ -41,13 +41,13 @@ public class ReplicaStats {
         }
     }
 
-    private static List<Metric> getReplicaStats(DBObject replicaStats, String metricPrefix) {
+    private static List<Metric> getReplicaStats(BasicDBObject replicaStats, String metricPrefix) {
         List<Metric> metrics = new ArrayList<Metric>();
         if (replicaStats != null) {
             String replicaStatsPath = getReplicaStatsMetricPrefix(metricPrefix);
             BasicDBList members = (BasicDBList) replicaStats.get("members");
             for (int i = 0; i < members.size(); i++) {
-                DBObject member = (DBObject) members.get(i);
+                BasicDBObject member = (BasicDBObject) members.get(i);
                 Metric metricHealth = new Metric("Health", member.get("health").toString(), replicaStatsPath + member.get("name") + METRICS_SEPARATOR + "Health");
                 metrics.add(metricHealth);
                 Metric metricState = new Metric("State", member.get("state").toString(), replicaStatsPath + member.get("state") + METRICS_SEPARATOR + "State");

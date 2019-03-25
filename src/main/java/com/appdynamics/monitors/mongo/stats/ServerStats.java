@@ -11,7 +11,7 @@ package com.appdynamics.monitors.mongo.stats;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
 import com.appdynamics.monitors.mongo.utils.MongoUtils;
-import com.mongodb.DBObject;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
-import static com.appdynamics.monitors.mongo.utils.MetricPrintUtils.getMetricPathPrefix;
 
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
@@ -29,14 +28,13 @@ public class ServerStats {
 
     private static final Logger logger = LoggerFactory.getLogger(ServerStats.class);
 
-
     public static List<Metric> fetchAndPrintServerStats(MongoDatabase adminDB, List<String> serverStatusExcludeMetricCategories, String metricPrefix) {
         Document commandJson = new Document();
         commandJson.append("serverStatus", 1);
         for (String suppressCategory : serverStatusExcludeMetricCategories) {
             commandJson.append(suppressCategory, 0);
         }
-        DBObject serverStats = MongoUtils.executeMongoCommand(adminDB, commandJson);
+        BasicDBObject serverStats = MongoUtils.executeMongoCommand(adminDB, commandJson);
         if (serverStats != null) {
 
             return getServerStats(serverStats, metricPrefix);
@@ -46,8 +44,7 @@ public class ServerStats {
         }
     }
 
-
-    private static List<Metric> getServerStats(DBObject serverStats, String metricPrefix) {
+    private static List<Metric> getServerStats(BasicDBObject serverStats, String metricPrefix) {
         String metricPath = getServerStatsMetricPrefix(metricPrefix);
         return MetricPrintUtils.getNumericMetricsFromMap(serverStats.toMap(), metricPath);
     }

@@ -10,7 +10,6 @@ package com.appdynamics.monitors.mongo.stats;
 
 import com.appdynamics.extensions.metrics.Metric;
 import com.mongodb.*;
-import com.mongodb.util.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,7 @@ public class CollectionStats {
                     DBCollection collection = db.getCollection(collectionName);
                     CommandResult collectionStatsResult = collection.getStats();
                     if (collectionStatsResult != null && collectionStatsResult.ok()) {
-                        DBObject collectionStats = (DBObject) JSON.parse(collectionStatsResult.toString());
+                        BasicDBObject collectionStats = BasicDBObject.parse(collectionStatsResult.toString());
                         metricList.addAll(getCollectionStats(db.getName(), collectionName, collectionStats, metricPrefix));
                     } else {
                         String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
@@ -56,7 +55,7 @@ public class CollectionStats {
     }
 
 
-    private static List<Metric> getCollectionStats(String dbName, String collectionName, DBObject collectionStats, String metricPrefix) {
+    private static List<Metric> getCollectionStats(String dbName, String collectionName, BasicDBObject collectionStats, String metricPrefix) {
         if (collectionStats != null) {
             String collectionStatsPath = getCollectionStatsMetricPrefix(dbName, collectionName, metricPrefix);
             return getNumericMetricsFromMap(collectionStats.toMap(), collectionStatsPath);

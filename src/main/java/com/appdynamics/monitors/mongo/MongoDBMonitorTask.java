@@ -21,6 +21,7 @@ import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -50,8 +51,18 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
         List<Metric> dbStats = DBStats.fetchDBStats(mongoClient, metricPrefix);
         List<Metric> collectionStats = CollectionStats.fetchCollectionStats(mongoClient, metricPrefix);
 
+        List<Metric> allMetrics = new ArrayList<Metric>();
+        allMetrics.addAll(serverStats);
+        allMetrics.addAll(replicaStats);
+        allMetrics.addAll(dbStats);
+        allMetrics.addAll(collectionStats);
+        if (allMetrics.size() > 0) {
+            metricWriter.transformAndPrintMetrics(allMetrics);
+            status = true;
+        } else {
+            status = false;
+        }
     }
-
 
     private List<String> getServerStatusExcludeMetricFields() {
         if (config.get("serverStatusExcludeMetricFields") != null) {

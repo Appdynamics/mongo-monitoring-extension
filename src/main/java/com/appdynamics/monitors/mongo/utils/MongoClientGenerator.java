@@ -25,7 +25,6 @@ import java.util.Map;
 
 import static com.appdynamics.extensions.crypto.CryptoUtil.getPassword;
 import static com.appdynamics.monitors.mongo.utils.Constants.*;
-import static com.appdynamics.monitors.mongo.utils.Constants.PORT;
 
 /**
  * Created by bhuvnesh.kumar on 3/21/19.
@@ -44,6 +43,7 @@ public class MongoClientGenerator {
         }
         return mongoClient;
     }
+
     private static MongoCredential getMongoCredentials(Map<String, String> credentials) {
         MongoCredential adminDBCredential = null;
         if (credentials.get(USERNAME) != null && credentials.get(PASSWORD) != null) {
