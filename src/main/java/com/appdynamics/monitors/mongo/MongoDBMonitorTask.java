@@ -42,26 +42,36 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     private MonitorContextConfiguration monitorContextConfiguration;
 
     public void run() {
-
         metricPrefix = getMetricPathPrefix(monitorContextConfiguration.getMetricPrefix());
         MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
-        List<Metric> serverStats = ServerStats.fetchAndPrintServerStats(adminDB, getServerStatusExcludeMetricFields(), metricPrefix);
-
-        List<Metric> replicaStats = ReplicaStats.fetchAndPrintReplicaSetStats(adminDB, mongoClient, metricPrefix);
-        List<Metric> dbStats = DBStats.fetchDBStats(mongoClient, metricPrefix);
-        List<Metric> collectionStats = CollectionStats.fetchCollectionStats(mongoClient, metricPrefix);
-
-        List<Metric> allMetrics = new ArrayList<Metric>();
-        allMetrics.addAll(serverStats);
-        allMetrics.addAll(replicaStats);
-        allMetrics.addAll(dbStats);
-        allMetrics.addAll(collectionStats);
+        List<Metric> allMetrics = collectMetricsFromAdminDB(adminDB);
         if (allMetrics.size() > 0) {
             metricWriter.transformAndPrintMetrics(allMetrics);
             status = true;
         } else {
             status = false;
         }
+    }
+
+    private List<Metric> collectMetricsFromAdminDB(MongoDatabase adminDB) {
+        List<Metric> allMetrics = new ArrayList<Metric>();
+        List<Metric> serverStats = ServerStats.fetchAndPrintServerStats(adminDB, getServerStatusExcludeMetricFields(), metricPrefix);
+        List<Metric> replicaStats = ReplicaStats.fetchAndPrintReplicaSetStats(adminDB, mongoClient, metricPrefix);
+        List<Metric> dbStats = DBStats.fetchDBStats(mongoClient, metricPrefix);
+        List<Metric> collectionStats = CollectionStats.fetchCollectionStats(mongoClient, metricPrefix);
+        if(serverStats != null){
+            allMetrics.addAll(serverStats);
+        }
+        if(replicaStats != null){
+            allMetrics.addAll(replicaStats);
+        }
+        if(dbStats != null){
+            allMetrics.addAll(dbStats);
+        }
+        if(collectionStats != null){
+            allMetrics.addAll(collectionStats);
+        }
+        return allMetrics;
     }
 
     private List<String> getServerStatusExcludeMetricFields() {

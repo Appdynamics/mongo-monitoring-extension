@@ -17,6 +17,7 @@ public class Constants {
     public static final String AVAILABILITY = "Availability";
     public static final String AVERAGE = "AVERAGE";
     public static final String CONNECTION = "connection";
+    public static final String CONNECTION_TIMEOUT = "connectionTimeout";
     public static final String CUSTOMMETRICS = "Custom Metrics";
     public static final String DISPLAY_NAME = "displayName";
     public static final String EMPTY_STRING = "";
@@ -31,6 +32,7 @@ public class Constants {
     public static final String PEM_FILE_PATH = "pemFilePath";
     public static final String PORT = "port";
     public static final String SERVERS = "servers";
+    public static final String SOCKET_TIMEOUT = "socketTimeout";
     public static final String SSL_ENABLED = "sslEnabled";
     public static final String TRUST_STORE_ENCRYPTED_PASSWORD = "sslTrustStoreEncryptedPassword";
     public static final String TRUST_STORE_PASSWORD = "sslTrustStorePassword";

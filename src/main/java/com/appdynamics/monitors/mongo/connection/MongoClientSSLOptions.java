@@ -15,8 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-import static com.appdynamics.monitors.mongo.utils.Constants.CONNECTION;
-import static com.appdynamics.monitors.mongo.utils.Constants.SSL_ENABLED;
+import static com.appdynamics.monitors.mongo.utils.Constants.*;
 
 /**
  * Created by bhuvnesh.kumar on 3/19/19.
@@ -26,17 +25,17 @@ public class MongoClientSSLOptions {
 
     public static MongoClientOptions getMongoClientSSLOptions(Map config) throws MongoMonitorException {
         Boolean ssl = false;
-        if (config.get(SSL_ENABLED) != null) {
-            ssl = (Boolean) config.get(SSL_ENABLED);
+        if (config.get(USE_SSL) != null) {
+            ssl = (Boolean) config.get(USE_SSL);
         }
         Map<String, ?> connectionMap = (Map<String, ?>) config.get(CONNECTION);
         MongoClientOptions.Builder optionsBuilder = MongoClientOptions.builder();
         if (ssl) {
-            if (connectionMap.get("connectTimeout") != null) {
-                optionsBuilder.connectTimeout((Integer) connectionMap.get("connectTimeout"));
+            if (connectionMap.get(CONNECTION_TIMEOUT) != null) {
+                optionsBuilder.connectTimeout((Integer) connectionMap.get(CONNECTION_TIMEOUT));
             }
-            if (connectionMap.get("socketTimeout") != null) {
-                optionsBuilder.socketTimeout((Integer) connectionMap.get("socketTimeout"));
+            if (connectionMap.get(SOCKET_TIMEOUT) != null) {
+                optionsBuilder.socketTimeout((Integer) connectionMap.get(SOCKET_TIMEOUT));
             }
             try {
                 optionsBuilder.sslEnabled(true);
