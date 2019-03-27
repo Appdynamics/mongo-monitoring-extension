@@ -30,7 +30,7 @@ public class CollectionStats {
         List<Metric> metricList = new ArrayList<Metric>();
 
         for (String databaseName : mongoClient.listDatabaseNames()) {
-            DB db = mongoClient.getDB(databaseName);
+            DB db = (DB) mongoClient.getDatabase(databaseName);
             Set<String> collectionNames = db.getCollectionNames();
             if (collectionNames != null && collectionNames.size() > 0) {
                 for (String collectionName : collectionNames) {

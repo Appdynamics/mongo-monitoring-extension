@@ -14,10 +14,16 @@ import com.appdynamics.extensions.util.AssertUtils;
 import com.appdynamics.monitors.mongo.connection.SslUtils;
 import com.appdynamics.monitors.mongo.utils.MongoClientGenerator;
 import com.mongodb.MongoClient;
+import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -81,6 +87,22 @@ public class MongoDBMonitor extends ABaseMonitor {
                 .monitorConfiguration(getContextConfiguration())
                 .config(config)
                 .build();
+    }
+
+
+    public static void main(String[] args) throws TaskExecutionException, IOException {
+
+//        ConsoleAppender ca = new ConsoleAppender();
+//        ca.setWriter(new OutputStreamWriter(System.out));
+//        ca.setLayout(new PatternLayout("%-5p [%t]: %m%n"));
+//        ca.setThreshold(Level
+//                .DEBUG);
+//        org.apache.log4j.Logger.getRootLogger().addAppender(ca);
+
+        MongoDBMonitor mongoMonitor = new MongoDBMonitor();
+        Map<String, String> argsMap = new HashMap<String, String>();
+        argsMap.put("config-file", "/Users/bhuvnesh.kumar/repos/appdynamics/extensions/mongo-monitoring-extension/src/main/resources/conf/config.yml");
+        mongoMonitor.execute(argsMap, null);
     }
 
 }

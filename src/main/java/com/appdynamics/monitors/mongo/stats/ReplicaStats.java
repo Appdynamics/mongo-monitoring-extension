@@ -30,15 +30,10 @@ public class ReplicaStats {
     private static final Logger logger = LoggerFactory.getLogger(ReplicaStats.class);
 
     public static List<Metric> fetchAndPrintReplicaSetStats(MongoDatabase adminDB, MongoClient mongoClient, String metricPrefix) {
-        if (mongoClient.getReplicaSetStatus() != null) {
             Document commandJson = new Document();
             commandJson.append("replSetGetStatus", 1);
             BasicDBObject replicaStats = executeMongoCommand(adminDB, commandJson);
             return getReplicaStats(replicaStats, metricPrefix);
-        } else {
-            logger.info("not running with --replSet, skipping replicaset stats");
-            return null;
-        }
     }
 
     private static List<Metric> getReplicaStats(BasicDBObject replicaStats, String metricPrefix) {
