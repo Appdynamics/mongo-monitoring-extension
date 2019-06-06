@@ -1,0 +1,94 @@
+<!--
+  ~ Copyright 2018. AppDynamics LLC and its affiliates.
+  ~ All Rights Reserved.
+  ~ This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+  ~ The copyright notice above does not evidence any actual or intended publication of such source code.
+  -->
+
+<!--
+aggregationType = AVERAGE | SUM | OBSERVATION
+timeRollUpType = AVERAGE | SUM | CURRENT
+clusterRollUpType = INDIVIDUAL | COLLECTIVE
+-->
+<!--
+Set delta = true for metric to report per-min data
+-->
+<stats>
+    <!-- ServerStats-->
+    <stat name="serverStats" children="entries">
+        <metric attr="pid" alias="Process ID" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="uptime" alias="Uptime" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="uptimeMillis" alias="Uptime(in millisec)" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="uptimeEstimate" alias="Uptime Estimate" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="ok" alias="Ok" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="asserts|msg" alias="asserts|message" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="asserts|regular" alias="asserts|regular" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="asserts|warning" alias="asserts|warning" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="asserts|user" alias="asserts|user" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="asserts|rollovers" alias="asserts|rollovers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="connections|current" alias="connections|current" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="connections|available" alias="connections|available" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="connections|totalCreated" alias="connections|totalCreated" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="globalLock|totalTime" alias="global lock|totalTime" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="activeClients|total" alias="global lock|active clients|total" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="activeClients|readers" alias="global lock|active clients|readers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="activeClients|writers" alias="global lock|active clients|writers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="currentQueue|total" alias="global lock|current queue|total" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="currentQueue|readers" alias="global lock|current queue|readers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="currentQueue|writers" alias="global lock|current queue|writers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="network|bytesIn" alias="network|bytesIn" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="network|bytesOut" alias="network|bytesOut" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="network|numRequests" alias="network|number Requests" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="opcounters|insert" alias="operations|insert" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="opcounters|query" alias="operations|query" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="opcounters|update" alias="operations|update" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="opcounters|delete" alias="operations|delete" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="opcounters|getmore" alias="operations|getmore" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="opcounters|command" alias="operations|command" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="mem|bits" alias="memory|bits" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="mem|resident" alias="memory|resident" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="mem|virtual" alias="memory|virtual" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="mem|mapped" alias="memory|mapped" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="mem|mappedWithJournal" alias="memory|mappedWithJournal" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+
+    </stat>
+
+    <!-- Replica Stats-->
+    <stat name="replicaStats" children="entries">
+        <metric attr="health" alias="Health" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="state" alias="State" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" />
+        <metric attr="uptime" alias="Uptime" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="primaryElected" alias="Primary Elected" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+    </stat>
+
+    <!-- DB Stats-->
+    <stat name="dbStats" children="entries">
+        <metric attr="collections" alias="collections" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="views" alias="views" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+        <metric attr="objects" alias="objects" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="avgObjSize" alias="avgObjSize" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="dataSize" alias="dataSize" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="storageSize" alias="storageSize" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="numExtents" alias="numExtents" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="indexes" alias="indexes" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="indexSize" alias="indexSize" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="fsUsedSize" alias="fsUsedSize" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="fsTotalSize" alias="fsTotalSize" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="ok" alias="ok" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+    </stat>
+
+    <!-- Collection Stats-->
+    <stat name="collectionStats" children="entries">
+        <metric attr="count" alias="count" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="lastExtentSize" alias="lastExtentSize" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+        <metric attr="nindexes" alias="nindexes" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="numExtents" alias="numExtents" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="paddingFactor" alias="paddingFactor" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="size" alias="size" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="storageSize" alias="storageSize" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="systemFlags" alias="systemFlags" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="totalIndexSize" alias="totalIndexSize" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="userFlags" alias="userFlags" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+    </stat>
+
+</stats>

@@ -9,7 +9,6 @@
 package com.appdynamics.monitors.mongo.utils;
 
 import com.mongodb.BasicDBObject;
-import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -21,20 +20,13 @@ import org.slf4j.LoggerFactory;
 public class MongoUtils {
     private static final Logger logger = LoggerFactory.getLogger(MongoUtils.class);
 
-    public static String convertToString(final Object field, final String defaultStr) {
-        if (field == null) {
-            return defaultStr;
-        }
-        return field.toString();
-    }
-
     public static BasicDBObject executeMongoCommand(MongoDatabase db, Document command) {
 
         BasicDBObject basicDBObject = null;
         try {
             basicDBObject = BasicDBObject.parse(db.runCommand(command).toJson());
 
-        } catch (MongoCommandException e) {
+        } catch (Exception e) {
             logger.error("Error while executing " + command + " for db " + db, e);
         }
         return basicDBObject;

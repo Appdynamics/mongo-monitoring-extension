@@ -10,6 +10,7 @@ package com.appdynamics.monitors.mongo.connection;
 
 import com.appdynamics.extensions.crypto.Decryptor;
 import com.appdynamics.extensions.util.PathResolver;
+import com.appdynamics.extensions.util.StringUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
@@ -19,7 +20,11 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Map;
 
-import static com.appdynamics.monitors.mongo.utils.Constants.*;
+import static com.appdynamics.monitors.mongo.utils.Constants.CONNECTION;
+import static com.appdynamics.monitors.mongo.utils.Constants.ENCRYPTION_KEY;
+import static com.appdynamics.monitors.mongo.utils.Constants.TRUST_STORE_ENCRYPTED_PASSWORD;
+import static com.appdynamics.monitors.mongo.utils.Constants.TRUST_STORE_PASSWORD;
+import static com.appdynamics.monitors.mongo.utils.Constants.TRUST_STORE_PATH;
 
 public class SslUtils {
     private static final Logger logger = LoggerFactory.getLogger(SslUtils.class);
@@ -39,7 +44,7 @@ public class SslUtils {
             Map<String, ?> connectionMap = (Map<String, ?>) configMap.get(CONNECTION);
             if (connectionMap.containsKey(TRUST_STORE_PATH)) {
                 Preconditions.checkNotNull(connectionMap.get(TRUST_STORE_PATH), "[sslTrustStorePath] cannot be null");
-                if (!(connectionMap.get(TRUST_STORE_PATH).toString()).isEmpty()) {
+                if (StringUtils.hasText(connectionMap.get(TRUST_STORE_PATH).toString())) {
                     String sslTrustStorePath = connectionMap.get(TRUST_STORE_PATH).toString();
                     File customSslTrustStoreFile = new File(sslTrustStorePath);
                     if (customSslTrustStoreFile == null || !customSslTrustStoreFile.exists()) {
@@ -50,7 +55,7 @@ public class SslUtils {
                         logger.debug("Setting SystemProperty [javax.net.ssl.trustStore] {} ", customSslTrustStoreFile.getAbsolutePath());
                         System.setProperty("javax.net.ssl.trustStore", customSslTrustStoreFile.getAbsolutePath());
                     }
-                } else if ((connectionMap.get(TRUST_STORE_PATH).toString()).isEmpty()) {
+                } else if (!StringUtils.hasText(connectionMap.get(TRUST_STORE_PATH).toString())) {
                     File installDir = PathResolver.resolveDirectory(AManagedMonitor.class);
                     File defaultTrustStoreFile = PathResolver.getFile("/conf/cacerts.jks", installDir);
                     if (defaultTrustStoreFile == null || !defaultTrustStoreFile.exists()) {

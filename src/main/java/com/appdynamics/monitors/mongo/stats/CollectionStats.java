@@ -8,65 +8,106 @@
 
 package com.appdynamics.monitors.mongo.stats;
 
+import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.conf.MonitorContext;
 import com.appdynamics.extensions.metrics.Metric;
-import com.mongodb.*;
+import com.appdynamics.monitors.mongo.input.Stat;
+import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
+import com.mongodb.BasicDBObject;
+import com.mongodb.CommandResult;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.MongoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Phaser;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
-import static com.appdynamics.monitors.mongo.utils.MetricPrintUtils.getNumericMetricsFromMap;
 
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
  */
-public class CollectionStats {
+public class CollectionStats implements Runnable{
+
     private static final Logger logger = LoggerFactory.getLogger(CollectionStats.class);
 
-    public static List<Metric> fetchCollectionStats(MongoClient mongoClient, String metricPrefix) {
-        List<Metric> metricList = new ArrayList<Metric>();
+    private Stat stat;
 
-        for (String databaseName : mongoClient.listDatabaseNames()) {
-            DB db = (DB) mongoClient.getDatabase(databaseName);
-            Set<String> collectionNames = db.getCollectionNames();
-            if (collectionNames != null && collectionNames.size() > 0) {
-                for (String collectionName : collectionNames) {
-                    DBCollection collection = db.getCollection(collectionName);
-                    CommandResult collectionStatsResult = collection.getStats();
-                    if (collectionStatsResult != null && collectionStatsResult.ok()) {
-                        BasicDBObject collectionStats = BasicDBObject.parse(collectionStatsResult.toString());
-                        metricList.addAll(getCollectionStats(db.getName(), collectionName, collectionStats, metricPrefix));
-                    } else {
-                        String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
-                        if (collectionStatsResult != null) {
-                            errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+    private MonitorContext context;
+
+    private MetricWriteHelper metricWriteHelper;
+
+    private List<Metric> metrics = new ArrayList<Metric>();
+
+    private String metricPrefix;
+
+    private MongoClient mongoClient;
+
+    private Phaser phaser;
+
+    private MetricPrintUtils metricPrintUtils;
+
+    public CollectionStats(Stat stat, MongoClient mongoClient, MonitorContext context, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
+        this.stat = stat;
+        this.context = context;
+        this.metricWriteHelper = metricWriteHelper;
+        this.metricPrefix = metricPrefix;
+        this.mongoClient = mongoClient;
+        this.metricPrintUtils = new MetricPrintUtils();
+        this.phaser = phaser;
+        this.phaser.register();
+    }
+
+    @Override
+    public void run() {
+        logger.debug("Begin fetching collection stats");
+        fetchCollectionStats(mongoClient, metricPrefix);
+    }
+
+    public void fetchCollectionStats(MongoClient mongoClient, String metricPrefix) {
+
+        try {
+            for (String databaseName : mongoClient.listDatabaseNames()) {
+                DB db = mongoClient.getDB(databaseName);
+                Set<String> collectionNames = db.getCollectionNames();
+                if (collectionNames != null && collectionNames.size() > 0) {
+                    for (String collectionName : collectionNames) {
+                        DBCollection collection = db.getCollection(collectionName);
+                        CommandResult collectionStatsResult = collection.getStats();
+                        if (collectionStatsResult != null && collectionStatsResult.ok()) {
+                            BasicDBObject collectionStats = BasicDBObject.parse(collectionStatsResult.toString());
+                            if (collectionStats != null) {
+                                metrics.addAll(metricPrintUtils.generateMetrics(metricPrintUtils.getNumericMetricsFromMap(collectionStats.toMap(), null), getCollectionStatsMetricPrefix(databaseName, collectionName, metricPrefix), stat));
+                                //metrics.addAll(getServerStats(serverStats, metricPrefix));
+                            }
+                            if (metrics != null && metrics.size() > 0) {
+                                metricWriteHelper.transformAndPrintMetrics(metrics);
+                            }
+                            //metricList.addAll(getCollectionStats(db.getName(), collectionName, collectionStats, metricPrefix));
+                        } else {
+                            String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
+                            if (collectionStatsResult != null) {
+                                errorMessage = errorMessage.concat(" with error message " + collectionStatsResult.getErrorMessage());
+                            }
+                            logger.error(errorMessage);
                         }
-                        logger.error(errorMessage);
-                        return null;
                     }
                 }
             }
-        }
-
-        return metricList;
-    }
-
-
-    private static List<Metric> getCollectionStats(String dbName, String collectionName, BasicDBObject collectionStats, String metricPrefix) {
-        if (collectionStats != null) {
-            String collectionStatsPath = getCollectionStatsMetricPrefix(dbName, collectionName, metricPrefix);
-            return getNumericMetricsFromMap(collectionStats.toMap(), collectionStatsPath);
-        } else {
-            logger.info("CollectionStats for db " + dbName + "found to be NULL");
-            return null;
+        }catch(Exception e){
+            logger.error("Error fetching collectionStats" , e);
+        }finally {
+            logger.debug("CollectionStats Phaser arrived");
+            phaser.arriveAndDeregister();
         }
     }
 
     private static String getCollectionStatsMetricPrefix(String dbName, String collectionName, String metricPrefix) {
-        return getDBStatsMetricPrefix(dbName, metricPrefix) + "Collection Stats|" + collectionName + METRICS_SEPARATOR;
+        return getDBStatsMetricPrefix(dbName, metricPrefix) + "Collection Stats|" + collectionName;
     }
 
     private static String getDBStatsMetricPrefix(String dbName, String metricPrefix) {

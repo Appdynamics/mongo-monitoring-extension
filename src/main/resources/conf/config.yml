@@ -9,7 +9,7 @@ servers:
     host: "localhost"
     port: 27017
 
-  - name: "Server 2"
+  - name: "Replica"
     host: "localhost"
     port: 27018
 
@@ -18,8 +18,8 @@ servers:
 
 # Admin DB username and password. Required if mongod is started with --auth (Authentication) else keep empty
 # The user should have clusterMonitor role as a minimum
-username: "admin"
-password: "admin"
+username: ""
+password: ""
 
 #     You can either use the normal password or encrypt your password and provide the encrypted Password and encryptionKey.
 #     Do not provide both, only provide one and comment out the other.
@@ -28,11 +28,12 @@ encryptedPassword: ""
 encryptionKey: ""
 
 
-# https://docs.mongodb.com/manual/reference/command/serverStatus/
-serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, metrics]
-
 # Change ssl to true if mongod is started with ssl.
 useSsl: false
+
+# For each server you monitor, you will need a total of 1(by default) + 1(for serverMetrics) + 1(for replicaMetrics) + 1(for DB) + 1(for collection)
+numberOfThreads: 5
+
 
 # If you are using the connection section,
 # any change to the connection section below requires a machine agent restart for the changes to reflect

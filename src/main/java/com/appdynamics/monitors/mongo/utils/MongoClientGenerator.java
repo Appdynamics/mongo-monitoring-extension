@@ -23,8 +23,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.appdynamics.extensions.crypto.CryptoUtil.getPassword;
-import static com.appdynamics.monitors.mongo.utils.Constants.*;
+import static com.appdynamics.extensions.util.CryptoUtils.getPassword;
+import static com.appdynamics.monitors.mongo.utils.Constants.ADMIN_DB;
+import static com.appdynamics.monitors.mongo.utils.Constants.ENCRYPTED_PASSWORD;
+import static com.appdynamics.monitors.mongo.utils.Constants.ENCRYPTION_KEY;
+import static com.appdynamics.monitors.mongo.utils.Constants.HOST;
+import static com.appdynamics.monitors.mongo.utils.Constants.PASSWORD;
+import static com.appdynamics.monitors.mongo.utils.Constants.PORT;
+import static com.appdynamics.monitors.mongo.utils.Constants.USERNAME;
 
 /**
  * Created by bhuvnesh.kumar on 3/21/19.
@@ -65,9 +71,6 @@ public class MongoClientGenerator {
             mongoClient = new MongoClient(seeds);
         } else if (options != null && credential == null) {
             mongoClient = new MongoClient(seeds, options);
-        } else if (options == null && credential != null) {
-            // no such constructor
-//            mongoClient = new MongoClientGenerator(seeds, credential);
         } else {
             mongoClient = new MongoClient(seeds, credential, options);
         }

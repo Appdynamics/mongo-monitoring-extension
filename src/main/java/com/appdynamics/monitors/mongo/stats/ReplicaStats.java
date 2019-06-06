@@ -8,17 +8,24 @@
 
 package com.appdynamics.monitors.mongo.stats;
 
+import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.conf.MonitorContext;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.monitors.mongo.input.Stat;
+import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
-import com.mongodb.MongoClient;
+import com.mongodb.DBObject;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Phaser;
 
 import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
 import static com.appdynamics.monitors.mongo.utils.MongoUtils.executeMongoCommand;
@@ -26,35 +33,70 @@ import static com.appdynamics.monitors.mongo.utils.MongoUtils.executeMongoComman
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
  */
-public class ReplicaStats {
+public class ReplicaStats implements Runnable{
+
     private static final Logger logger = LoggerFactory.getLogger(ReplicaStats.class);
 
-    public static List<Metric> fetchAndPrintReplicaSetStats(MongoDatabase adminDB, MongoClient mongoClient, String metricPrefix) {
+    private Stat stat;
+
+    private MonitorContext context;
+
+    private MetricWriteHelper metricWriteHelper;
+
+    private List<Metric> metrics = new ArrayList<Metric>();
+
+    private String metricPrefix;
+
+    private MongoDatabase adminDB;
+
+    private Phaser phaser;
+
+    private MetricPrintUtils metricPrintUtils;
+
+    public ReplicaStats(Stat stat, MongoDatabase adminDB, MonitorContext context, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
+        this.stat = stat;
+        this.adminDB = adminDB;
+        this.context = context;
+        this.metricWriteHelper = metricWriteHelper;
+        this.metricPrefix = metricPrefix;
+        this.metricPrintUtils = new MetricPrintUtils();
+        this.phaser = phaser;
+        this.phaser.register();
+    }
+
+    public void run(){
+        logger.debug("Begin fetching replica stats");
+        fetchAndPrintReplicaSetStats(adminDB, metricPrefix);
+    }
+
+    public void fetchAndPrintReplicaSetStats(MongoDatabase adminDB, String metricPrefix) {
+        try {
             Document commandJson = new Document();
             commandJson.append("replSetGetStatus", 1);
             BasicDBObject replicaStats = executeMongoCommand(adminDB, commandJson);
-            return getReplicaStats(replicaStats, metricPrefix);
+            if (replicaStats != null) {
+                BasicDBList members = (BasicDBList) replicaStats.get("members");
+                Map<String, Object> memebersData = new HashMap<>();
+                for (int i = 0; i < members.size(); i++) {
+                    DBObject member = (DBObject) members.get(i);
+                    memebersData.putAll(member.toMap());
+                }
+                metrics.addAll(metricPrintUtils.generateMetrics(metricPrintUtils.getNumericMetricsFromMap(memebersData, null), getReplicaStatsMetricPrefix(metricPrefix), stat));
+            }
+            if (metrics != null && metrics.size() > 0) {
+                metricWriteHelper.transformAndPrintMetrics(metrics);
+            }
+        } catch (Exception e) {
+            logger.error("Error fetching replicaStats", e);
+        } finally {
+            logger.debug("ReplicaStats Phaser arrived for {}", adminDB.getName());
+            phaser.arriveAndDeregister();
+        }
     }
 
-    private static List<Metric> getReplicaStats(BasicDBObject replicaStats, String metricPrefix) {
-        List<Metric> metrics = new ArrayList<Metric>();
-        if (replicaStats != null) {
-            String replicaStatsPath = getReplicaStatsMetricPrefix(metricPrefix);
-            BasicDBList members = (BasicDBList) replicaStats.get("members");
-            for (int i = 0; i < members.size(); i++) {
-                BasicDBObject member = (BasicDBObject) members.get(i);
-                Metric metricHealth = new Metric("Health", member.get("health").toString(), replicaStatsPath + member.get("name") + METRICS_SEPARATOR + "Health");
-                metrics.add(metricHealth);
-                Metric metricState = new Metric("State", member.get("state").toString(), replicaStatsPath + member.get("state") + METRICS_SEPARATOR + "State");
-                metrics.add(metricState);
-                Metric metricUptime = new Metric("Uptime", member.get("uptime").toString(), replicaStatsPath + member.get("uptime") + METRICS_SEPARATOR + "Uptime");
-                metrics.add(metricUptime);
-            }
-        }
-        return metrics;
-    }
+
 
     private static String getReplicaStatsMetricPrefix(String metricPrefix) {
-        return metricPrefix + "Replica Stats" + METRICS_SEPARATOR;
+        return metricPrefix + "Replica Stats" ;
     }
 }

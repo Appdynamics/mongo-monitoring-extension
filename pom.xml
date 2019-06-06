@@ -24,7 +24,7 @@
         <dependency>
             <groupId>com.appdynamics</groupId>
             <artifactId>appd-exts-commons</artifactId>
-            <version>2.1.0</version>
+            <version>2.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.mongodb</groupId>
@@ -32,31 +32,16 @@
             <version>3.9.0</version>
         </dependency>
         <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk15on</artifactId>
-            <version>1.50</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-net</groupId>
-            <artifactId>commons-net</artifactId>
-            <version>3.3</version>
-        </dependency>
-        <dependency>
             <groupId>com.appdynamics</groupId>
             <artifactId>machine-agent</artifactId>
             <version>3.7.11</version>
-            <!--<scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
             <version>1.10.19</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.4</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -68,7 +53,9 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
+            <scope>provided</scope>
         </dependency>
+
     </dependencies>
     <build>
         <finalName>${project.artifactId}</finalName>
@@ -78,8 +65,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -113,6 +100,7 @@
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Implementation-Title>MongoMonitor v${project.version} Build Date ${maven.build.timestamp}</Implementation-Title>
+                                        <Main-Class>com.appdynamics.extensions.workbench.WorkbenchServerLauncher</Main-Class>
                                     </manifestEntries>
                                 </transformer>
                             </transformers>
@@ -130,21 +118,20 @@
                         <phase>install</phase>
                         <configuration>
                             <target>
-                                <property name="target.dir" value="${project.build.directory}/MongoMonitor"/>
+                                <property name="target.dir" value="${project.build.directory}/ApacheMonitor"/>
                                 <mkdir dir="${target.dir}"/>
                                 <copy todir="${target.dir}">
                                     <fileset dir="src/main/resources/conf" includes="monitor.xml"/>
-                                </copy>
-                                <copy todir="${target.dir}">
                                     <fileset dir="src/main/resources/conf" includes="config.yml"/>
-                                    <fileset dir="${project.basedir}" includes="LICENSE.txt,NOTICE.txt"/>
+                                    <fileset dir="src/main/resources/conf" includes="metrics.xml"/>
+                                    <fileset dir="${project.basedir}" includes="LICENSE.txt"/>
+                                    <fileset dir="${project.basedir}" includes="NOTICE.txt"/>
                                 </copy>
                                 <copy todir="${target.dir}">
-                                    <fileset dir="${project.build.directory}"
-                                             includes="${project.artifactId}.${project.packaging}"/>
+                                    <fileset dir="${project.build.directory}" includes="${project.artifactId}.${project.packaging}"/>
                                 </copy>
                                 <zip destfile="${target.dir}-${project.version}.zip">
-                                    <zipfileset dir="${target.dir}" filemode="755" prefix="MongoMonitor/"/>
+                                    <zipfileset dir="${target.dir}" filemode="755" prefix="MongoMonitor"/>
                                 </zip>
                                 <delete dir="${target.dir}"/>
                             </target>

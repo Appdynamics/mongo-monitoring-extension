@@ -15,7 +15,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-import static com.appdynamics.monitors.mongo.utils.Constants.*;
+import static com.appdynamics.monitors.mongo.utils.Constants.CONNECTION;
+import static com.appdynamics.monitors.mongo.utils.Constants.CONNECTION_TIMEOUT;
+import static com.appdynamics.monitors.mongo.utils.Constants.SOCKET_TIMEOUT;
+import static com.appdynamics.monitors.mongo.utils.Constants.USE_SSL;
 
 /**
  * Created by bhuvnesh.kumar on 3/19/19.
