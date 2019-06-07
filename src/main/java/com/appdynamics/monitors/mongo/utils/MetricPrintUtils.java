@@ -20,8 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
+import java.util.Set;
 
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
@@ -40,10 +39,10 @@ public class MetricPrintUtils {
         String metricName;
         try {
             for (Map.Entry<String, Object> entry : map.entrySet()) {
-                if (entry.getValue() instanceof BasicDBObject) {
+                if (entry.getValue() instanceof BasicDBObject || entry.getValue() instanceof Map) {
                     // Map found, digging further
                     getNumericMetricsFromMap((Map<String, Object>) entry.getValue(), entry.getKey());
-                } else {
+                } else{
                     if (entry.getValue() instanceof Number) {
                         metricName =  (key!=null ? key + "|" : "") + entry.getKey();
                         if (entry.getKey().contains(",")) {
@@ -51,9 +50,6 @@ public class MetricPrintUtils {
                         }
                         parsedData.put(metricName, entry.getValue().toString());
                     }
-                    if (entry.getKey().equalsIgnoreCase("stateStr") && entry.getValue().toString().equalsIgnoreCase("PRIMARY"))
-                        parsedData.put("primaryElected", "1");
-
                 }
             }
         }catch(Exception e){
@@ -74,6 +70,28 @@ public class MetricPrintUtils {
                 metrics.add(metric);
             }
         }
+        logger.debug("Returning " + metrics.size() + " metrics for " + metricPrefix);
+        return metrics;
+    }
+
+    // Separate method for replica metrics as the replica member names are dynamic
+    public List<Metric> generateReplicaMetrics(Map<String, String> valueMap, String metricPrefix, Stat childStat, Set<String> membersData, int primaryElected) {
+
+        List<Metric> metrics = new ArrayList<>();
+        for(String memberName: membersData) {
+            for (MetricConfig metricConfig : childStat.getMetricConfig()) {
+                String metricValue = valueMap.get(memberName + "|" + metricConfig.getAttr());
+                if (metricValue != null) {
+                    Map<String, String> propertiesMap = objectMapper.convertValue(metricConfig, Map.class);
+                    Metric metric = new Metric(metricConfig.getAttr(), String.valueOf(metricValue), metricPrefix + "|" + memberName + "|" + metricConfig.getAlias(), propertiesMap);
+                    metrics.add(metric);
+                }
+            }
+        }
+        if(primaryElected == 1){
+            metrics.add(new Metric("Primary Elected", String.valueOf(primaryElected), metricPrefix + "|Primary Elected", "AVG", "AVG", "IND"));
+        }
+        logger.debug("Returning " + metrics.size() + " metrics for " + metricPrefix);
         return metrics;
     }
 

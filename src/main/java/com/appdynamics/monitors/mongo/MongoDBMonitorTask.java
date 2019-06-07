@@ -21,6 +21,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.concurrent.Phaser;
 
@@ -54,19 +55,19 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
             Stat.Stats metricConfig = (Stat.Stats) monitorContextConfiguration.getMetricsXml();
             for (Stat stat : metricConfig.getStats()) {
                 if (StringUtils.hasText(stat.getName()) && stat.getName().equalsIgnoreCase("serverStats")) {
-                    ServerStats serverMetricTask = new ServerStats(stat, adminDB, monitorContextConfiguration.getContext(), metricWriter, metricPrefix, phaser);
+                    ServerStats serverMetricTask = new ServerStats(stat, adminDB, metricWriter, metricPrefix, phaser);
                     monitorContextConfiguration.getContext().getExecutorService().execute("MetricCollectorTask", serverMetricTask);
                     logger.debug("Registering MetricCollectorTask phaser for server stats");
                 } else if (StringUtils.hasText(stat.getName()) && stat.getName().equalsIgnoreCase("replicaStats")) {
-                    ReplicaStats replicaMetricsTask = new ReplicaStats(stat, adminDB, monitorContextConfiguration.getContext(), metricWriter, metricPrefix, phaser);
+                    ReplicaStats replicaMetricsTask = new ReplicaStats(stat, adminDB, mongoClient, metricWriter, metricPrefix, phaser);
                     monitorContextConfiguration.getContext().getExecutorService().execute("MetricCollectorTask", replicaMetricsTask);
                     logger.debug("Registering MetricCollectorTask phaser for replica stats");
                 } else if (StringUtils.hasText(stat.getName()) && stat.getName().equalsIgnoreCase("dbStats")) {
-                    DBStats dbMetricsTask = new DBStats(stat, adminDB, mongoClient, monitorContextConfiguration.getContext(), metricWriter, metricPrefix, phaser);
+                    DBStats dbMetricsTask = new DBStats(stat, adminDB, mongoClient, metricWriter, metricPrefix, phaser);
                     monitorContextConfiguration.getContext().getExecutorService().execute("MetricCollectorTask", dbMetricsTask);
                     logger.debug("Registering MetricCollectorTask phaser for database stats");
                 } else if (StringUtils.hasText(stat.getName()) && stat.getName().equalsIgnoreCase("collectionStats")) {
-                    CollectionStats collectionMetricsTask = new CollectionStats(stat, mongoClient, monitorContextConfiguration.getContext(), metricWriter, metricPrefix, phaser);
+                    CollectionStats collectionMetricsTask = new CollectionStats(stat, mongoClient, metricWriter, metricPrefix, phaser);
                     monitorContextConfiguration.getContext().getExecutorService().execute("MetricCollectorTask", collectionMetricsTask);
                     logger.debug("Registering MetricCollectorTask phaser for collection stats");
                 }

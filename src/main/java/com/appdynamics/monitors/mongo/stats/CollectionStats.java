@@ -9,7 +9,6 @@
 package com.appdynamics.monitors.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
-import com.appdynamics.extensions.conf.MonitorContext;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.input.Stat;
 import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
@@ -36,9 +35,6 @@ public class CollectionStats implements Runnable{
     private static final Logger logger = LoggerFactory.getLogger(CollectionStats.class);
 
     private Stat stat;
-
-    private MonitorContext context;
-
     private MetricWriteHelper metricWriteHelper;
 
     private List<Metric> metrics = new ArrayList<Metric>();
@@ -51,15 +47,18 @@ public class CollectionStats implements Runnable{
 
     private MetricPrintUtils metricPrintUtils;
 
-    public CollectionStats(Stat stat, MongoClient mongoClient, MonitorContext context, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
+    public CollectionStats(Stat stat, MongoClient mongoClient, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
-        this.context = context;
         this.metricWriteHelper = metricWriteHelper;
         this.metricPrefix = metricPrefix;
         this.mongoClient = mongoClient;
         this.metricPrintUtils = new MetricPrintUtils();
         this.phaser = phaser;
         this.phaser.register();
+    }
+
+    public List<Metric> getMetrics() {
+        return metrics;
     }
 
     @Override
@@ -82,12 +81,10 @@ public class CollectionStats implements Runnable{
                             BasicDBObject collectionStats = BasicDBObject.parse(collectionStatsResult.toString());
                             if (collectionStats != null) {
                                 metrics.addAll(metricPrintUtils.generateMetrics(metricPrintUtils.getNumericMetricsFromMap(collectionStats.toMap(), null), getCollectionStatsMetricPrefix(databaseName, collectionName, metricPrefix), stat));
-                                //metrics.addAll(getServerStats(serverStats, metricPrefix));
                             }
                             if (metrics != null && metrics.size() > 0) {
                                 metricWriteHelper.transformAndPrintMetrics(metrics);
                             }
-                            //metricList.addAll(getCollectionStats(db.getName(), collectionName, collectionStats, metricPrefix));
                         } else {
                             String errorMessage = "Retrieving stats for collection " + collectionName + " of " + db.getName() + " failed";
                             if (collectionStatsResult != null) {

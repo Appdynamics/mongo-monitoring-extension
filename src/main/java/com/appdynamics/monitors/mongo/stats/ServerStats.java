@@ -9,7 +9,6 @@
 package com.appdynamics.monitors.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
-import com.appdynamics.extensions.conf.MonitorContext;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.input.Stat;
 import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
@@ -24,8 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Phaser;
 
-import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
-
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
  */
@@ -34,8 +31,6 @@ public class ServerStats implements Runnable{
     private static final Logger logger = LoggerFactory.getLogger(ServerStats.class);
 
     private Stat stat;
-
-    private MonitorContext context;
 
     private MetricWriteHelper metricWriteHelper;
 
@@ -49,16 +44,20 @@ public class ServerStats implements Runnable{
 
     private MetricPrintUtils metricPrintUtils;
 
-    public ServerStats(Stat stat, MongoDatabase adminDB, MonitorContext context, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
+    public ServerStats(Stat stat, MongoDatabase adminDB, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
         this.adminDB = adminDB;
-        this.context = context;
         this.metricWriteHelper = metricWriteHelper;
         this.metricPrefix = metricPrefix;
         this.metricPrintUtils = new MetricPrintUtils();
         this.phaser = phaser;
         this.phaser.register();
     }
+
+    public List<Metric> getMetrics() {
+        return metrics;
+    }
+
     public void run(){
         logger.debug("Begin fetching sever stats");
         fetchAndPrintServerStats(adminDB, metricPrefix);
