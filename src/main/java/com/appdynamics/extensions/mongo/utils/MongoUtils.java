@@ -6,7 +6,7 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.utils;
+package com.appdynamics.extensions.mongo.utils;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;

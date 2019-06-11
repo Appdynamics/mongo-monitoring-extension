@@ -6,12 +6,13 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.stats;
+package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricUtils;
+import com.appdynamics.extensions.mongo.input.Stat;
+import com.appdynamics.extensions.mongo.utils.MetricUtils;
+import com.appdynamics.extensions.mongo.utils.MongoUtils;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -30,8 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Phaser;
-
-import static com.appdynamics.monitors.mongo.utils.MongoUtils.executeMongoCommand;
 
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
@@ -84,7 +83,7 @@ public class ReplicaStats implements Runnable{
             Object primaryOptime = null;
             Object secondaryOptime = null;
             long replicationLag = 0;
-            BasicDBObject replicaStats = executeMongoCommand(adminDB, commandJson);
+            BasicDBObject replicaStats = MongoUtils.executeMongoCommand(adminDB, commandJson);
             if (replicaStats != null) {
                 BasicDBList members = (BasicDBList) replicaStats.get("members");
                 Map<String, Object> membersData = new HashMap<>();
@@ -137,6 +136,6 @@ public class ReplicaStats implements Runnable{
 
 
     private static String getReplicaStatsMetricPrefix(String metricPrefix) {
-        return metricPrefix + "|Replica Stats" ;
+        return metricPrefix + "Replica Stats" ;
     }
 }

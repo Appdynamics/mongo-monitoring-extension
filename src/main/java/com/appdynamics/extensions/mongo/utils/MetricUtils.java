@@ -6,11 +6,11 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.utils;
+package com.appdynamics.extensions.mongo.utils;
 
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.monitors.mongo.input.MetricConfig;
-import com.appdynamics.monitors.mongo.input.Stat;
+import com.appdynamics.extensions.mongo.input.MetricConfig;
+import com.appdynamics.extensions.mongo.input.Stat;
 import com.mongodb.BasicDBObject;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;

@@ -7,7 +7,7 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.input;
+package com.appdynamics.extensions.mongo.input;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

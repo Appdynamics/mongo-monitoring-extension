@@ -6,7 +6,7 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.exception;
+package com.appdynamics.extensions.mongo.exception;
 
 /**
  * Created by balakrishnav on 5/8/15.

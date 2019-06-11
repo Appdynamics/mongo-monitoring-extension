@@ -6,12 +6,13 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.stats;
+package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricUtils;
+import com.appdynamics.extensions.mongo.utils.Constants;
+import com.appdynamics.extensions.mongo.utils.MetricUtils;
+import com.appdynamics.extensions.mongo.input.Stat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.CommandResult;
 import com.mongodb.DB;
@@ -24,8 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Phaser;
-
-import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
 
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
@@ -109,7 +108,7 @@ public class CollectionStats implements Runnable{
     }
 
     private static String getDBStatsMetricPrefix(String dbName, String metricPrefix) {
-        return metricPrefix + "|DB Stats|" + dbName + METRICS_SEPARATOR;
+        return metricPrefix + "DB Stats|" + dbName + Constants.METRICS_SEPARATOR;
     }
 
 

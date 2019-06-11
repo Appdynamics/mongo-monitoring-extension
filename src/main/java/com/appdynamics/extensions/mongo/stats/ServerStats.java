@@ -6,13 +6,14 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.stats;
+package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricUtils;
-import com.appdynamics.monitors.mongo.utils.MongoUtils;
+import com.appdynamics.extensions.mongo.input.Stat;
+import com.appdynamics.extensions.mongo.utils.Constants;
+import com.appdynamics.extensions.mongo.utils.MetricUtils;
+import com.appdynamics.extensions.mongo.utils.MongoUtils;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -44,6 +45,8 @@ public class ServerStats implements Runnable{
 
     private MetricUtils metricUtils;
 
+    private Boolean status = true;
+
     public ServerStats(Stat stat, MongoDatabase adminDB, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
         this.adminDB = adminDB;
@@ -70,20 +73,26 @@ public class ServerStats implements Runnable{
             BasicDBObject serverStats = MongoUtils.executeMongoCommand(adminDB, commandJson);
             if (serverStats != null) {
                 metrics.addAll(metricUtils.generateMetrics(metricUtils.getNumericMetricsFromMap(serverStats.toMap(), null), getServerStatsMetricPrefix(metricPrefix), stat));
-            }
+            }else
+                status = false;
             if (metrics != null && metrics.size() > 0) {
                 metricWriteHelper.transformAndPrintMetrics(metrics);
             }
         }catch(Exception e){
             logger.error("Error fetching serverStats" , e);
         }finally {
+            if (status == true) {
+                metricWriteHelper.printMetric(metricPrefix + Constants.METRICS_SEPARATOR + "MongoDB" + Constants.METRICS_SEPARATOR + Constants.HEART_BEAT, "1", "AVERAGE", "AVERAGE", "INDIVIDUAL");
+            } else {
+                metricWriteHelper.printMetric(metricPrefix + Constants.METRICS_SEPARATOR + "MongoDB" + Constants.METRICS_SEPARATOR + Constants.HEART_BEAT, "0", "AVERAGE", "AVERAGE", "INDIVIDUAL");
+            }
             logger.debug("ServerStats Phaser arrived for {}", adminDB.getName());
             phaser.arriveAndDeregister();
         }
     }
 
     private static String getServerStatsMetricPrefix(String metricPrefix) {
-        return metricPrefix + "|Server Stats";
+        return metricPrefix + "Server Stats";
     }
 
 }

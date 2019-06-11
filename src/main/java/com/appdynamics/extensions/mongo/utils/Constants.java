@@ -6,7 +6,7 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.utils;
+package com.appdynamics.extensions.mongo.utils;
 
 /**
  * Created by bhuvnesh.kumar on 3/12/19.
@@ -14,7 +14,7 @@ package com.appdynamics.monitors.mongo.utils;
 public class Constants {
 
     public static final String ADMIN_DB = "admin";
-    public static final String AVAILABILITY = "Availability";
+    public static final String HEART_BEAT = "Heart Beat";
     public static final String AVERAGE = "AVERAGE";
     public static final String CONNECTION = "connection";
     public static final String CONNECTION_TIMEOUT = "connectionTimeout";

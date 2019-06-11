@@ -26,7 +26,7 @@
         </task-arguments>
         <java-task>
             <classpath>mongo-monitoring-extension.jar</classpath>
-            <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
+            <impl-class>com.appdynamics.extensions.mongo.MongoDBMonitor</impl-class>
         </java-task>
     </monitor-run-task>
 </monitor>

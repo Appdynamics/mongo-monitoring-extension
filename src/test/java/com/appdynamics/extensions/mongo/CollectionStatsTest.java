@@ -6,12 +6,11 @@ import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.util.PathResolver;
-import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.stats.CollectionStats;
-import com.appdynamics.monitors.mongo.utils.MongoUtils;
+import com.appdynamics.extensions.mongo.input.Stat;
+import com.appdynamics.extensions.mongo.stats.CollectionStats;
+import com.appdynamics.extensions.mongo.utils.MongoUtils;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonParser;
-import com.mongodb.BasicDBObject;
 import com.mongodb.CommandResult;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
@@ -22,7 +21,6 @@ import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -126,7 +124,7 @@ public class CollectionStatsTest {
     }
 
     @Test
-    public void testDBStats() throws TaskExecutionException {
+    public void testCollectionStats() throws TaskExecutionException {
 
         expectedValueMap = getExpectedValueMap();
         collectionStats.run();
@@ -143,13 +141,6 @@ public class CollectionStatsTest {
         map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|size","170");
         map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|storageSize","16384");
         map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|totalIndexSize","16384");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|storageSize","32768.0");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|numExtents","0");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|indexes","2");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|indexSize","32768.0");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|fsUsedSize","4.822");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|fsTotalSize","5");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|ok","1.0");
         return map;
     }
 

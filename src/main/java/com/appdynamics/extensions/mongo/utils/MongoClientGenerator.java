@@ -6,10 +6,10 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.utils;
+package com.appdynamics.extensions.mongo.utils;
 
-import com.appdynamics.monitors.mongo.connection.MongoClientSSLOptions;
-import com.appdynamics.monitors.mongo.exception.MongoMonitorException;
+import com.appdynamics.extensions.mongo.connection.MongoClientSSLOptions;
+import com.appdynamics.extensions.mongo.exception.MongoMonitorException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.mongodb.MongoClient;
@@ -24,13 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.appdynamics.extensions.util.CryptoUtils.getPassword;
-import static com.appdynamics.monitors.mongo.utils.Constants.ADMIN_DB;
-import static com.appdynamics.monitors.mongo.utils.Constants.ENCRYPTED_PASSWORD;
-import static com.appdynamics.monitors.mongo.utils.Constants.ENCRYPTION_KEY;
-import static com.appdynamics.monitors.mongo.utils.Constants.HOST;
-import static com.appdynamics.monitors.mongo.utils.Constants.PASSWORD;
-import static com.appdynamics.monitors.mongo.utils.Constants.PORT;
-import static com.appdynamics.monitors.mongo.utils.Constants.USERNAME;
 
 /**
  * Created by bhuvnesh.kumar on 3/21/19.
@@ -52,8 +45,8 @@ public class MongoClientGenerator {
 
     private static MongoCredential getMongoCredentials(Map<String, String> credentials) {
         MongoCredential adminDBCredential = null;
-        if (credentials.get(USERNAME) != null && credentials.get(PASSWORD) != null) {
-            adminDBCredential = MongoCredential.createCredential(credentials.get(USERNAME), ADMIN_DB, credentials.get(PASSWORD).toCharArray());
+        if (credentials.get(Constants.USERNAME) != null && credentials.get(Constants.PASSWORD) != null) {
+            adminDBCredential = MongoCredential.createCredential(credentials.get(Constants.USERNAME), Constants.ADMIN_DB, credentials.get(Constants.PASSWORD).toCharArray());
         } else {
             logger.info("username and password in config are null or empty");
         }
@@ -65,7 +58,7 @@ public class MongoClientGenerator {
         MongoClient mongoClient = null;
         List<ServerAddress> seeds = Lists.newArrayList();
         for (Map server : servers) {
-            seeds.add(new ServerAddress(server.get(HOST).toString(), (Integer) server.get(PORT)));
+            seeds.add(new ServerAddress(server.get(Constants.HOST).toString(), (Integer) server.get(Constants.PORT)));
         }
         if (options == null && credential == null) {
             mongoClient = new MongoClient(seeds);
@@ -80,22 +73,22 @@ public class MongoClientGenerator {
     private static Map getCredentials(Map config) {
         Map<String, String> credentials = new HashMap<String, String>();
 
-        if (!Strings.isNullOrEmpty(config.get(USERNAME).toString())) {
-            credentials.put(USERNAME, config.get(USERNAME).toString());
+        if (!Strings.isNullOrEmpty(config.get(Constants.USERNAME).toString())) {
+            credentials.put(Constants.USERNAME, config.get(Constants.USERNAME).toString());
         }
-        if (!Strings.isNullOrEmpty(config.get(PASSWORD).toString())) {
-            credentials.put(PASSWORD, config.get(PASSWORD).toString());
+        if (!Strings.isNullOrEmpty(config.get(Constants.PASSWORD).toString())) {
+            credentials.put(Constants.PASSWORD, config.get(Constants.PASSWORD).toString());
         }
-        if (!Strings.isNullOrEmpty(config.get(ENCRYPTED_PASSWORD).toString())) {
-            credentials.put(ENCRYPTED_PASSWORD, config.get(ENCRYPTED_PASSWORD).toString());
+        if (!Strings.isNullOrEmpty(config.get(Constants.ENCRYPTED_PASSWORD).toString())) {
+            credentials.put(Constants.ENCRYPTED_PASSWORD, config.get(Constants.ENCRYPTED_PASSWORD).toString());
         }
-        if (!Strings.isNullOrEmpty(config.get(ENCRYPTION_KEY).toString())) {
-            credentials.put(ENCRYPTION_KEY, config.get(ENCRYPTION_KEY).toString());
+        if (!Strings.isNullOrEmpty(config.get(Constants.ENCRYPTION_KEY).toString())) {
+            credentials.put(Constants.ENCRYPTION_KEY, config.get(Constants.ENCRYPTION_KEY).toString());
         }
         String password = getPassword(credentials);
-        credentials.remove(ENCRYPTION_KEY);
-        credentials.remove(ENCRYPTED_PASSWORD);
-        credentials.put(PASSWORD, password);
+        credentials.remove(Constants.ENCRYPTION_KEY);
+        credentials.remove(Constants.ENCRYPTED_PASSWORD);
+        credentials.put(Constants.PASSWORD, password);
         return credentials;
     }
 

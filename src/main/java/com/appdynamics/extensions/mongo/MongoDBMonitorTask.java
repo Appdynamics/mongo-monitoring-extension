@@ -6,17 +6,18 @@
  *
  */
 
-package com.appdynamics.monitors.mongo;
+package com.appdynamics.extensions.mongo;
 
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.mongo.input.Stat;
+import com.appdynamics.extensions.mongo.stats.CollectionStats;
+import com.appdynamics.extensions.mongo.stats.DBStats;
+import com.appdynamics.extensions.mongo.utils.Constants;
 import com.appdynamics.extensions.util.StringUtils;
-import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.stats.CollectionStats;
-import com.appdynamics.monitors.mongo.stats.DBStats;
-import com.appdynamics.monitors.mongo.stats.ReplicaStats;
-import com.appdynamics.monitors.mongo.stats.ServerStats;
+import com.appdynamics.extensions.mongo.stats.ReplicaStats;
+import com.appdynamics.extensions.mongo.stats.ServerStats;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
@@ -25,16 +26,11 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.Phaser;
 
-import static com.appdynamics.monitors.mongo.utils.Constants.ADMIN_DB;
-import static com.appdynamics.monitors.mongo.utils.Constants.AVAILABILITY;
-import static com.appdynamics.monitors.mongo.utils.Constants.METRICS_SEPARATOR;
-
 /**
  * Created by bhuvnesh.kumar on 3/12/19.
  */
 public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     private static final Logger logger = LoggerFactory.getLogger(MongoDBMonitorTask.class);
-    private Boolean status = true;
     private Map config;
     private String metricPrefix;
     private MongoClient mongoClient;
@@ -45,8 +41,7 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     public void run() {
 
         try {
-            MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
-
+            MongoDatabase adminDB = mongoClient.getDatabase(Constants.ADMIN_DB);
             Phaser phaser = new Phaser();
             phaser.register();
             Stat.Stats metricConfig = (Stat.Stats) monitorContextConfiguration.getMetricsXml();
@@ -79,12 +74,7 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     }
 
     public void onTaskComplete() {
-        logger.debug("Task Complete");
-        if (status == true) {
-            metricWriter.printMetric(metricPrefix + METRICS_SEPARATOR + "MongoDB" + METRICS_SEPARATOR + AVAILABILITY, "1", "AVERAGE", "AVERAGE", "INDIVIDUAL");
-        } else {
-            metricWriter.printMetric(metricPrefix + METRICS_SEPARATOR + "MongoDB" + METRICS_SEPARATOR + AVAILABILITY, "0", "AVERAGE", "AVERAGE", "INDIVIDUAL");
-        }
+        logger.debug("All MongoDB Tasks Complete");
     }
 
     public static class Builder {

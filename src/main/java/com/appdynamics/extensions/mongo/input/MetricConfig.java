@@ -7,7 +7,7 @@
  *
  */
 
-package com.appdynamics.monitors.mongo.input;
+package com.appdynamics.extensions.mongo.input;
 
 
 import com.google.common.collect.Maps;
