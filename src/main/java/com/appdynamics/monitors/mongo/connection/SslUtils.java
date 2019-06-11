@@ -30,7 +30,6 @@ public class SslUtils {
     private static final Logger logger = LoggerFactory.getLogger(SslUtils.class);
 
     /**
-     * This method executes every time config file is changed.
      * sets SSL params only if [connection] is present in config.yml
      * if [connection] section is present in the config.yml --> means  SSL is required for atleast 1 server
      * if [sslTrustStorePath] is empty in the config.yml ---> then use MA certs at <MA-Home>/conf/cacerts.jks
