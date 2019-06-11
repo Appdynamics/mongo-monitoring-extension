@@ -59,7 +59,7 @@ public class MongoDBMonitor extends ABaseMonitor {
                 try {
                     MongoDBMonitorTask task = createTask(mongoClient, taskExecutor, getContextConfiguration().getConfigYml());
                     taskExecutor.submit("MongoDB", task);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     logger.error("Cannot construct MongoClient uri for MongoDB", e);
                 }
         } else {
@@ -80,7 +80,7 @@ public class MongoDBMonitor extends ABaseMonitor {
         }
     }
 
-    private MongoDBMonitorTask createTask(MongoClient mongoClient, TasksExecutionServiceProvider taskExecutor, Map config) throws IOException {
+    private MongoDBMonitorTask createTask(MongoClient mongoClient, TasksExecutionServiceProvider taskExecutor, Map config){
         return new MongoDBMonitorTask.Builder()
                 .mongoClient(mongoClient)
                 .metricWriter(taskExecutor.getMetricWriteHelper())

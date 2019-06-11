@@ -11,7 +11,7 @@ package com.appdynamics.monitors.mongo.stats;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
+import com.appdynamics.monitors.mongo.utils.MetricUtils;
 import com.mongodb.BasicDBObject;
 import com.mongodb.CommandResult;
 import com.mongodb.DB;
@@ -35,6 +35,7 @@ public class CollectionStats implements Runnable{
     private static final Logger logger = LoggerFactory.getLogger(CollectionStats.class);
 
     private Stat stat;
+
     private MetricWriteHelper metricWriteHelper;
 
     private List<Metric> metrics = new ArrayList<Metric>();
@@ -45,14 +46,14 @@ public class CollectionStats implements Runnable{
 
     private Phaser phaser;
 
-    private MetricPrintUtils metricPrintUtils;
+    private MetricUtils metricUtils;
 
     public CollectionStats(Stat stat, MongoClient mongoClient, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
         this.metricWriteHelper = metricWriteHelper;
         this.metricPrefix = metricPrefix;
         this.mongoClient = mongoClient;
-        this.metricPrintUtils = new MetricPrintUtils();
+        this.metricUtils = new MetricUtils();
         this.phaser = phaser;
         this.phaser.register();
     }
@@ -77,10 +78,10 @@ public class CollectionStats implements Runnable{
                     for (String collectionName : collectionNames) {
                         DBCollection collection = db.getCollection(collectionName);
                         CommandResult collectionStatsResult = collection.getStats();
-                        if (collectionStatsResult != null && collectionStatsResult.ok()) {
+                        if (collectionStatsResult != null ) {
                             BasicDBObject collectionStats = BasicDBObject.parse(collectionStatsResult.toString());
                             if (collectionStats != null) {
-                                metrics.addAll(metricPrintUtils.generateMetrics(metricPrintUtils.getNumericMetricsFromMap(collectionStats.toMap(), null), getCollectionStatsMetricPrefix(databaseName, collectionName, metricPrefix), stat));
+                                metrics.addAll(metricUtils.generateMetrics(metricUtils.getNumericMetricsFromMap(collectionStats.toMap(), null), getCollectionStatsMetricPrefix(databaseName, collectionName, metricPrefix), stat));
                             }
                             if (metrics != null && metrics.size() > 0) {
                                 metricWriteHelper.transformAndPrintMetrics(metrics);
@@ -108,7 +109,7 @@ public class CollectionStats implements Runnable{
     }
 
     private static String getDBStatsMetricPrefix(String dbName, String metricPrefix) {
-        return metricPrefix + "DB Stats|" + dbName + METRICS_SEPARATOR;
+        return metricPrefix + "|DB Stats|" + dbName + METRICS_SEPARATOR;
     }
 
 

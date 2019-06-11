@@ -130,7 +130,7 @@
                         <phase>install</phase>
                         <configuration>
                             <target>
-                                <property name="target.dir" value="${project.build.directory}/ApacheMonitor"/>
+                                <property name="target.dir" value="${project.build.directory}/MongoMonitor"/>
                                 <mkdir dir="${target.dir}"/>
                                 <copy todir="${target.dir}">
                                     <fileset dir="src/main/resources/conf" includes="monitor.xml"/>

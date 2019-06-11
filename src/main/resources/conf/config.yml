@@ -1,7 +1,7 @@
 #prefix used to show up metrics in AppDynamics
 metricPrefix:  "Custom Metrics|Mongo Server|"
 #This will create it in specific Tier. Replace <TIER_ID>
-#metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo Server|"
+#metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo DB|"
 
 # MongoDB host and port. If ReplicaSet is enabled, configure all or subset of members of the cluster.
 servers:
@@ -13,16 +13,14 @@ servers:
     host: "localhost"
     port: 27018
 
-# Specify this key if Password Encryption Support is required. If not keep it empty
-# If specified, password and databases passwords are now the encrypted passwords.
-
 # Admin DB username and password. Required if mongod is started with --auth (Authentication) else keep empty
 # The user should have clusterMonitor role as a minimum
 username: ""
 password: ""
 
-#     You can either use the normal password or encrypt your password and provide the encrypted Password and encryptionKey.
-#     Do not provide both, only provide one and comment out the other.
+# You can either use the normal password or encrypt your password and provide the encrypted Password and encryptionKey.
+# Specify this key if Password Encryption Support is required. If not keep it empty
+# Do not provide both, only provide one and comment out the other.
 
 encryptedPassword: ""
 encryptionKey: ""

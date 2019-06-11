@@ -11,7 +11,7 @@ package com.appdynamics.monitors.mongo.stats;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
+import com.appdynamics.monitors.mongo.utils.MetricUtils;
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
@@ -46,7 +46,7 @@ public class DBStats implements Runnable{
 
     private Phaser phaser;
 
-    private MetricPrintUtils metricPrintUtils;
+    private MetricUtils metricUtils;
 
     public DBStats(Stat stat, MongoDatabase adminDB, MongoClient mongoClient, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
@@ -54,7 +54,7 @@ public class DBStats implements Runnable{
         this.mongoClient = mongoClient;
         this.metricWriteHelper = metricWriteHelper;
         this.metricPrefix = metricPrefix;
-        this.metricPrintUtils = new MetricPrintUtils();
+        this.metricUtils = new MetricUtils();
         this.phaser = phaser;
         this.phaser.register();
     }
@@ -77,13 +77,14 @@ public class DBStats implements Runnable{
                 MongoDatabase db = mongoClient.getDatabase(databaseName);
                 BasicDBObject dbStats = executeMongoCommand(db, commandJson);
                 if (dbStats != null) {
-                    metrics.addAll(metricPrintUtils.generateMetrics(metricPrintUtils.getNumericMetricsFromMap(dbStats.toMap(), null), getDBStatsMetricPrefix(dbStats.get("db").toString(), metricPrefix), stat));
+                    metrics.addAll(metricUtils.generateMetrics(metricUtils.getNumericMetricsFromMap(dbStats.toMap(), null), getDBStatsMetricPrefix(dbStats.get("db").toString(), metricPrefix), stat));
 
                 }
                 if (metrics != null && metrics.size() > 0) {
                     metricWriteHelper.transformAndPrintMetrics(metrics);
                 }
             }
+
 
         }catch(Exception e){
             logger.error("Error fetching DBStats" , e);
@@ -94,7 +95,7 @@ public class DBStats implements Runnable{
     }
 
     private String getDBStatsMetricPrefix(String dbName, String metricPrefix) {
-        return metricPrefix + "DB Stats|" + dbName;
+        return metricPrefix + "|DB Stats|" + dbName;
     }
 
 }

@@ -11,7 +11,7 @@ package com.appdynamics.monitors.mongo.stats;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
+import com.appdynamics.monitors.mongo.utils.MetricUtils;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class ReplicaStats implements Runnable{
 
     private Phaser phaser;
 
-    private MetricPrintUtils metricPrintUtils;
+    private MetricUtils metricUtils;
 
     public ReplicaStats(Stat stat, MongoDatabase adminDB,  MongoClient mongoClient, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
@@ -61,7 +62,7 @@ public class ReplicaStats implements Runnable{
         this.metricWriteHelper = metricWriteHelper;
         this.mongoClient = mongoClient;
         this.metricPrefix = metricPrefix;
-        this.metricPrintUtils = new MetricPrintUtils();
+        this.metricUtils = new MetricUtils();
         this.phaser = phaser;
         this.phaser.register();
     }
@@ -80,18 +81,26 @@ public class ReplicaStats implements Runnable{
         try {
             Document commandJson = new Document();
             commandJson.append("replSetGetStatus", 1);
+            Object primaryOptime = null;
+            Object secondaryOptime = null;
+            long replicationLag = 0;
             BasicDBObject replicaStats = executeMongoCommand(adminDB, commandJson);
             if (replicaStats != null) {
                 BasicDBList members = (BasicDBList) replicaStats.get("members");
-                Map<String, Object> memebersData = new HashMap<>();
+                Map<String, Object> membersData = new HashMap<>();
                 for (int i = 0; i < members.size(); i++) {
                     DBObject member = (DBObject) members.get(i);
-                    memebersData.put(member.get("name").toString(),member.toMap());
-                    if (member.get("stateStr").toString().equalsIgnoreCase("PRIMARY"))
+                    membersData.put(member.get("name").toString(),member.toMap());
+
+                    if (member.get("stateStr").toString().equalsIgnoreCase("PRIMARY") ) {
+                        primaryOptime =member.get("optimeDate");
                         primaryElected = 1;
+                    }
+                    if (member.get("stateStr").toString().equalsIgnoreCase("SECONDARY"))
+                        secondaryOptime = member.get("optimeDate");
                 }
 
-                metrics.addAll(metricPrintUtils.generateReplicaMetrics(metricPrintUtils.getNumericMetricsFromMap(memebersData, null), getReplicaStatsMetricPrefix(metricPrefix), stat, memebersData.keySet(), primaryElected));
+                metrics.addAll(metricUtils.generateReplicaMetrics(metricUtils.getNumericMetricsFromMap(membersData, null), getReplicaStatsMetricPrefix(metricPrefix), stat, membersData.keySet(), primaryElected));
             }
 
             logger.debug("Calculating replication oplog window");
@@ -103,9 +112,15 @@ public class ReplicaStats implements Runnable{
             DBObject lastEntry = dbObjects.get(dbObjects.size()-1);
             BSONTimestamp startTime = (BSONTimestamp)startEntry.get("ts");
             BSONTimestamp endTime = (BSONTimestamp)lastEntry.get("ts");
-            int diff = startTime.getTime()-endTime.getTime();
+            //getTime returns time in seconds, converting it to hours
+            int diff = (startTime.getTime()-endTime.getTime())/3600;
 
-            metrics.add(new Metric("Replica Oplog Window", String.valueOf(diff), getReplicaStatsMetricPrefix(metricPrefix) + "| Replica Oplog Window", "OBS", "CUR", "COL"));
+            metrics.add(new Metric("Replica Oplog Window", String.valueOf(diff), getReplicaStatsMetricPrefix(metricPrefix) + "|Replica Oplog Window", "OBS", "CUR", "COL"));
+
+            if(primaryOptime!=null && secondaryOptime!=null) {
+                replicationLag = ((Date) primaryOptime).getTime() - ((Date) secondaryOptime).getTime();
+                metrics.add(new Metric("Replication Lag", String.valueOf(replicationLag), getReplicaStatsMetricPrefix(metricPrefix) + "|Replication Lag", "OBS", "CUR", "COL"));
+            }
 
             logger.debug("Fetched all replica metrics");
             if (metrics != null && metrics.size() > 0) {
@@ -122,6 +137,6 @@ public class ReplicaStats implements Runnable{
 
 
     private static String getReplicaStatsMetricPrefix(String metricPrefix) {
-        return metricPrefix + "Replica Stats" ;
+        return metricPrefix + "|Replica Stats" ;
     }
 }

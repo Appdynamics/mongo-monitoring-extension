@@ -44,9 +44,6 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
 
     public void run() {
 
-        if (!metricPrefix.endsWith(METRICS_SEPARATOR)) {
-            metricPrefix += METRICS_SEPARATOR;
-        }
         try {
             MongoDatabase adminDB = mongoClient.getDatabase(ADMIN_DB);
 
@@ -77,7 +74,7 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
         logger.info("Completed the MongoDB Monitoring task");
 
         }catch(Exception e) {
-        logger.error("Unexpected error while running the NongoDB Monitor", e);
+        logger.error("Unexpected error while running the MongoDB Monitor", e);
         }
     }
 

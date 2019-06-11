@@ -11,7 +11,7 @@ package com.appdynamics.monitors.mongo.stats;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.monitors.mongo.input.Stat;
-import com.appdynamics.monitors.mongo.utils.MetricPrintUtils;
+import com.appdynamics.monitors.mongo.utils.MetricUtils;
 import com.appdynamics.monitors.mongo.utils.MongoUtils;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
@@ -42,14 +42,14 @@ public class ServerStats implements Runnable{
 
     private Phaser phaser;
 
-    private MetricPrintUtils metricPrintUtils;
+    private MetricUtils metricUtils;
 
     public ServerStats(Stat stat, MongoDatabase adminDB, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
         this.adminDB = adminDB;
         this.metricWriteHelper = metricWriteHelper;
         this.metricPrefix = metricPrefix;
-        this.metricPrintUtils = new MetricPrintUtils();
+        this.metricUtils = new MetricUtils();
         this.phaser = phaser;
         this.phaser.register();
     }
@@ -69,7 +69,7 @@ public class ServerStats implements Runnable{
             commandJson.append("serverStatus", 1);
             BasicDBObject serverStats = MongoUtils.executeMongoCommand(adminDB, commandJson);
             if (serverStats != null) {
-                metrics.addAll(metricPrintUtils.generateMetrics(metricPrintUtils.getNumericMetricsFromMap(serverStats.toMap(), null), getServerStatsMetricPrefix(metricPrefix), stat));
+                metrics.addAll(metricUtils.generateMetrics(metricUtils.getNumericMetricsFromMap(serverStats.toMap(), null), getServerStatsMetricPrefix(metricPrefix), stat));
             }
             if (metrics != null && metrics.size() > 0) {
                 metricWriteHelper.transformAndPrintMetrics(metrics);
@@ -83,7 +83,7 @@ public class ServerStats implements Runnable{
     }
 
     private static String getServerStatsMetricPrefix(String metricPrefix) {
-        return metricPrefix + "Server Stats";
+        return metricPrefix + "|Server Stats";
     }
 
 }

@@ -26,7 +26,7 @@ public class Constants {
     public static final String HOST = "host";
     public static final String INDIVIDUAL = "INDIVIDUAL";
     public static final String METRICS_SEPARATOR = "|";
-    public static final String MONITORNAME = "Mongo Server";
+    public static final String MONITORNAME = "MongoDB Monitor";
     public static final String NAME = "name";
     public static final String PASSWORD = "password";
     public static final String PEM_FILE_PATH = "pemFilePath";

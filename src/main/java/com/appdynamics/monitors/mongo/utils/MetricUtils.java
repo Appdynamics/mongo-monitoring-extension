@@ -25,9 +25,9 @@ import java.util.Set;
 /**
  * Created by bhuvnesh.kumar on 3/22/19.
  */
-public class MetricPrintUtils {
+public class MetricUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(MetricPrintUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(MetricUtils.class);
 
     private static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -43,13 +43,11 @@ public class MetricPrintUtils {
                     // Map found, digging further
                     getNumericMetricsFromMap((Map<String, Object>) entry.getValue(), entry.getKey());
                 } else{
-                    if (entry.getValue() instanceof Number) {
-                        metricName =  (key!=null ? key + "|" : "") + entry.getKey();
+                        metricName = (key!=null ? key + "|" : "") + entry.getKey();
                         if (entry.getKey().contains(",")) {
                             metricName = metricName.replaceAll(",", ":");
                         }
                         parsedData.put(metricName, entry.getValue().toString());
-                    }
                 }
             }
         }catch(Exception e){
