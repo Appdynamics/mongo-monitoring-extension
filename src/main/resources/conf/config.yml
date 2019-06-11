@@ -1,5 +1,5 @@
 #prefix used to show up metrics in AppDynamics
-metricPrefix:  "Custom Metrics|Mongo Server|"
+metricPrefix:  "Custom Metrics|Mongo DB|"
 #This will create it in specific Tier. Replace <TIER_ID>
 #metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo DB|"
 

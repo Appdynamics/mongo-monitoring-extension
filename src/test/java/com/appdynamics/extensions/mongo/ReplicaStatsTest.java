@@ -5,10 +5,10 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.extensions.util.PathResolver;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.stats.ReplicaStats;
 import com.appdynamics.extensions.mongo.utils.MongoUtils;
+import com.appdynamics.extensions.util.PathResolver;
 import com.google.common.collect.Maps;
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
@@ -21,6 +21,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -30,10 +32,12 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Phaser;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.verify;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(MongoUtils.class)
@@ -91,6 +95,9 @@ public class ReplicaStatsTest {
                         return BasicDBObject.parse(bson.toString());
                     }
                 });
+
+        Mockito.doNothing().when(replicaStats).getReplicationOplogMetric(Matchers.any(Object.class), Matchers.any(Object.class));
+
     }
 
     @Test
@@ -99,7 +106,22 @@ public class ReplicaStatsTest {
         expectedValueMap = getExpectedValueMap();
         replicaStats.run();
 
-        validateMetrics();
+        ArgumentCaptor<List> pathCaptor = ArgumentCaptor.forClass(List.class);
+        verify(metricWriter).transformAndPrintMetrics(pathCaptor.capture());
+
+        for(Metric metric: (List<Metric>)pathCaptor.getValue()) {
+
+            String actualValue = metric.getMetricValue();
+            String metricName = metric.getMetricPath();
+            if (expectedValueMap.containsKey(metricName)) {
+                String expectedValue = expectedValueMap.get(metricName);
+                Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
+                expectedValueMap.remove(metricName);
+            } else {
+                System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
+                Assert.fail("Unknown Metric " + metricName);
+            }
+        }
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
@@ -115,21 +137,5 @@ public class ReplicaStatsTest {
         map.put("Custom Metrics|Mongo|Replica Stats|Primary Elected", "1");
 
         return map;
-    }
-
-    private void validateMetrics(){
-        for(Metric metric: replicaStats.getMetrics()) {
-
-            String actualValue = metric.getMetricValue();
-            String metricName = metric.getMetricPath();
-            if (expectedValueMap.containsKey(metricName)) {
-                String expectedValue = expectedValueMap.get(metricName);
-                Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
-                expectedValueMap.remove(metricName);
-            } else {
-                System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
-                Assert.fail("Unknown Metric " + metricName);
-            }
-        }
     }
 }

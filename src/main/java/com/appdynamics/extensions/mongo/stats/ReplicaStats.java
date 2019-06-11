@@ -66,10 +66,6 @@ public class ReplicaStats implements Runnable{
         this.phaser.register();
     }
 
-    public List<Metric> getMetrics() {
-        return metrics;
-    }
-
     public void run(){
         logger.debug("Begin fetching replica stats");
         fetchAndPrintReplicaSetStats(adminDB, metricPrefix);
@@ -82,7 +78,6 @@ public class ReplicaStats implements Runnable{
             commandJson.append("replSetGetStatus", 1);
             Object primaryOptime = null;
             Object secondaryOptime = null;
-            long replicationLag = 0;
             BasicDBObject replicaStats = MongoUtils.executeMongoCommand(adminDB, commandJson);
             if (replicaStats != null) {
                 BasicDBList members = (BasicDBList) replicaStats.get("members");
@@ -98,28 +93,10 @@ public class ReplicaStats implements Runnable{
                     if (member.get("stateStr").toString().equalsIgnoreCase("SECONDARY"))
                         secondaryOptime = member.get("optimeDate");
                 }
-
+                getReplicationOplogMetric(primaryOptime, secondaryOptime);
                 metrics.addAll(metricUtils.generateReplicaMetrics(metricUtils.getNumericMetricsFromMap(membersData, null), getReplicaStatsMetricPrefix(metricPrefix), stat, membersData.keySet(), primaryElected));
             }
 
-            logger.debug("Calculating replication oplog window");
-            DB db = mongoClient.getDB("local");
-            DBCollection collection = db.getCollection("oplog.rs");
-            List<DBObject> dbObjects = collection.find().sort(new BasicDBObject("ts",-1)).toArray();
-
-            DBObject startEntry = dbObjects.get(0);
-            DBObject lastEntry = dbObjects.get(dbObjects.size()-1);
-            BSONTimestamp startTime = (BSONTimestamp)startEntry.get("ts");
-            BSONTimestamp endTime = (BSONTimestamp)lastEntry.get("ts");
-            //getTime returns time in seconds, converting it to hours
-            int diff = (startTime.getTime()-endTime.getTime())/3600;
-
-            metrics.add(new Metric("Replica Oplog Window", String.valueOf(diff), getReplicaStatsMetricPrefix(metricPrefix) + "|Replica Oplog Window", "OBS", "CUR", "COL"));
-
-            if(primaryOptime!=null && secondaryOptime!=null) {
-                replicationLag = ((Date) primaryOptime).getTime() - ((Date) secondaryOptime).getTime();
-                metrics.add(new Metric("Replication Lag", String.valueOf(replicationLag), getReplicaStatsMetricPrefix(metricPrefix) + "|Replication Lag", "OBS", "CUR", "COL"));
-            }
 
             logger.debug("Fetched all replica metrics");
             if (metrics != null && metrics.size() > 0) {
@@ -133,7 +110,29 @@ public class ReplicaStats implements Runnable{
         }
     }
 
+    public void getReplicationOplogMetric(Object primaryOptime, Object secondaryOptime){
+        logger.debug("Calculating replication oplog window");
 
+        long replicationLag = 0;
+        DB db = mongoClient.getDB("local");
+        DBCollection collection = db.getCollection("oplog.rs");
+        List<DBObject> dbObjects = collection.find().sort(new BasicDBObject("ts",-1)).toArray();
+
+        DBObject startEntry = dbObjects.get(0);
+        DBObject lastEntry = dbObjects.get(dbObjects.size()-1);
+        BSONTimestamp startTime = (BSONTimestamp)startEntry.get("ts");
+        BSONTimestamp endTime = (BSONTimestamp)lastEntry.get("ts");
+        //getTime returns time in seconds, converting it to hours
+        int diff = (startTime.getTime()-endTime.getTime())/3600;
+
+        metrics.add(new Metric("Replica Oplog Window", String.valueOf(diff), getReplicaStatsMetricPrefix(metricPrefix) + "|Replica Oplog Window", "OBS", "CUR", "COL"));
+
+        if(primaryOptime!=null && secondaryOptime!=null) {
+            replicationLag = ((Date) primaryOptime).getTime() - ((Date) secondaryOptime).getTime();
+            metrics.add(new Metric("Replication Lag", String.valueOf(replicationLag), getReplicaStatsMetricPrefix(metricPrefix) + "|Replication Lag", "OBS", "CUR", "COL"));
+        }
+
+    }
 
     private static String getReplicaStatsMetricPrefix(String metricPrefix) {
         return metricPrefix + "Replica Stats" ;

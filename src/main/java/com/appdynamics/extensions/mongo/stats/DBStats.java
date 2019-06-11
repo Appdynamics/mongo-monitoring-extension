@@ -59,10 +59,6 @@ public class DBStats implements Runnable{
         this.phaser.register();
     }
 
-    public List<Metric> getMetrics() {
-        return metrics;
-    }
-
     public void run(){
         logger.debug("Begin fetching db stats");
         fetchDBStats();

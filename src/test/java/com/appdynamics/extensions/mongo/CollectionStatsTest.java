@@ -5,10 +5,10 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.extensions.util.PathResolver;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.stats.CollectionStats;
 import com.appdynamics.extensions.mongo.utils.MongoUtils;
+import com.appdynamics.extensions.util.PathResolver;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonParser;
 import com.mongodb.CommandResult;
@@ -23,6 +23,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -34,11 +35,13 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.FileReader;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Phaser;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.verify;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(MongoUtils.class)
@@ -129,23 +132,10 @@ public class CollectionStatsTest {
         expectedValueMap = getExpectedValueMap();
         collectionStats.run();
 
-        validateMetrics();
-        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
-                , expectedValueMap.isEmpty());
-    }
+        ArgumentCaptor<List> pathCaptor = ArgumentCaptor.forClass(List.class);
+        verify(metricWriter).transformAndPrintMetrics(pathCaptor.capture());
 
-    private Map<String, String> getExpectedValueMap() {
-        Map<String, String> map = Maps.newHashMap();
-        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|count","2");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|nindexes","1");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|size","170");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|storageSize","16384");
-        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|totalIndexSize","16384");
-        return map;
-    }
-
-    private void validateMetrics(){
-        for(Metric metric: collectionStats.getMetrics()) {
+        for(Metric metric: (List<Metric>)pathCaptor.getValue()) {
 
             String actualValue = metric.getMetricValue();
             String metricName = metric.getMetricPath();
@@ -158,6 +148,18 @@ public class CollectionStatsTest {
                 Assert.fail("Unknown Metric " + metricName);
             }
         }
+        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
+                , expectedValueMap.isEmpty());
+    }
+
+    private Map<String, String> getExpectedValueMap() {
+        Map<String, String> map = Maps.newHashMap();
+        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|count","2");
+        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|nindexes","1");
+        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|size","170");
+        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|storageSize","16384");
+        map.put("Custom Metrics|Mongo|DB Stats|admin|Collection Stats|admin|totalIndexSize","16384");
+        return map;
     }
 
 }

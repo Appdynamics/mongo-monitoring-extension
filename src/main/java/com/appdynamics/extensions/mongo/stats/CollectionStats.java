@@ -10,9 +10,9 @@ package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.utils.Constants;
 import com.appdynamics.extensions.mongo.utils.MetricUtils;
-import com.appdynamics.extensions.mongo.input.Stat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.CommandResult;
 import com.mongodb.DB;
@@ -55,10 +55,6 @@ public class CollectionStats implements Runnable{
         this.metricUtils = new MetricUtils();
         this.phaser = phaser;
         this.phaser.register();
-    }
-
-    public List<Metric> getMetrics() {
-        return metrics;
     }
 
     @Override

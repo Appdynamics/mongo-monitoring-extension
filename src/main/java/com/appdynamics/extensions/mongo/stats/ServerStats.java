@@ -45,8 +45,6 @@ public class ServerStats implements Runnable{
 
     private MetricUtils metricUtils;
 
-    private Boolean status = true;
-
     public ServerStats(Stat stat, MongoDatabase adminDB, MetricWriteHelper metricWriteHelper, String metricPrefix, Phaser phaser) {
         this.stat = stat;
         this.adminDB = adminDB;
@@ -57,16 +55,13 @@ public class ServerStats implements Runnable{
         this.phaser.register();
     }
 
-    public List<Metric> getMetrics() {
-        return metrics;
-    }
-
     public void run(){
         logger.debug("Begin fetching sever stats");
         fetchAndPrintServerStats(adminDB, metricPrefix);
     }
 
     public void fetchAndPrintServerStats(MongoDatabase adminDB, String metricPrefix) {
+        Boolean status = true;
         try {
             Document commandJson = new Document();
             commandJson.append("serverStatus", 1);
@@ -82,9 +77,9 @@ public class ServerStats implements Runnable{
             logger.error("Error fetching serverStats" , e);
         }finally {
             if (status == true) {
-                metricWriteHelper.printMetric(metricPrefix + Constants.METRICS_SEPARATOR + "MongoDB" + Constants.METRICS_SEPARATOR + Constants.HEART_BEAT, "1", "AVERAGE", "AVERAGE", "INDIVIDUAL");
+                metricWriteHelper.printMetric(metricPrefix + Constants.HEART_BEAT, "1", "AVERAGE", "AVERAGE", "INDIVIDUAL");
             } else {
-                metricWriteHelper.printMetric(metricPrefix + Constants.METRICS_SEPARATOR + "MongoDB" + Constants.METRICS_SEPARATOR + Constants.HEART_BEAT, "0", "AVERAGE", "AVERAGE", "INDIVIDUAL");
+                metricWriteHelper.printMetric(metricPrefix + Constants.HEART_BEAT, "0", "AVERAGE", "AVERAGE", "INDIVIDUAL");
             }
             logger.debug("ServerStats Phaser arrived for {}", adminDB.getName());
             phaser.arriveAndDeregister();

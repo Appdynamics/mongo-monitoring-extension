@@ -14,10 +14,10 @@ import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.stats.CollectionStats;
 import com.appdynamics.extensions.mongo.stats.DBStats;
-import com.appdynamics.extensions.mongo.utils.Constants;
-import com.appdynamics.extensions.util.StringUtils;
 import com.appdynamics.extensions.mongo.stats.ReplicaStats;
 import com.appdynamics.extensions.mongo.stats.ServerStats;
+import com.appdynamics.extensions.mongo.utils.Constants;
+import com.appdynamics.extensions.util.StringUtils;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
@@ -39,6 +39,10 @@ public class MongoDBMonitorTask implements AMonitorTaskRunnable {
     private MonitorContextConfiguration monitorContextConfiguration;
 
     public void run() {
+
+        if (!metricPrefix.endsWith(Constants.METRICS_SEPARATOR)) {
+            metricPrefix += Constants.METRICS_SEPARATOR;
+        }
 
         try {
             MongoDatabase adminDB = mongoClient.getDatabase(Constants.ADMIN_DB);
