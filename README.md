@@ -91,9 +91,8 @@ For eg.
           metricPrefix: "Server|Component:<COMPONENT_ID>|Custom Metrics|Mongo DB|".
 
           For example,
-          ```
           metricPrefix: "Server|Component:100|Custom Metrics|Mongo DB|"
-
+          
 #### Metrics.xml
 
 You can add/remove metrics of your choosing by modifying the provided metrics.xml file. This file consists of all the metrics that
@@ -116,15 +115,14 @@ For configuring the metrics, the following properties can be used:
      | delta             | false           | true, false                     | If enabled, gives the delta values of metrics instead of actual values.                                        |
 
      For example,
-     ```
      - name: "uptime"
               alias: "Uptime"
               aggregationType: "OBSERVATION"
               timeRollUpType: "CURRENT"
               clusterRollUpType: "COLLECTIVE"
               delta: false
-     ```
      **All these metric properties are optional, and the default value shown in the table is applied to the metric(if a property has not been specified) by default.**
+```
 
 ## Credentials Encryption
 
@@ -134,9 +132,9 @@ Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How
 Workbench is an inbuilt feature provided with each extension in order to assist you to fine tune the extension setup before you actually deploy it on the controller. Please review the following document on [How to use the Extensions WorkBench](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-the-Extensions-WorkBench/ta-p/30130)
 
 
-##Metrics
+## Metrics
 
-###Server Stats
+### Server Stats
 
 <table><tbody>
 <tr>
@@ -150,7 +148,7 @@ Workbench is an inbuilt feature provided with each extension in order to assist 
 </tbody>
 </table>
 
-#####Metric Category: Asserts
+##### Metric Category: Asserts
 
 <table><tbody>
 <tr>
@@ -180,7 +178,7 @@ Workbench is an inbuilt feature provided with each extension in order to assist 
 </tbody>
 </table>
 
-#####Metric Category: Background Flushing 
+##### Metric Category: Background Flushing 
 
 <table><tbody>
 <tr>
@@ -206,7 +204,7 @@ Workbench is an inbuilt feature provided with each extension in order to assist 
 </tbody>
 </table>
 
-#####Metric Category: Connections
+##### Metric Category: Connections
 
 <table><tbody>
 <tr>
@@ -228,7 +226,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-#####Metric Category: Global Lock
+##### Metric Category: Global Lock
  
  <table>
  <tbody>
@@ -264,7 +262,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-######Current Queue
+###### Current Queue
 
 <table><tbody>
 <tr>
@@ -287,7 +285,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-#####Metric Category: Memory
+##### Metric Category: Memory
 
 <table><tbody>
 <tr>
@@ -318,7 +316,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-#####Metric Category: Network
+##### Metric Category: Network
 <table><tbody>
 <tr>
 <th align="left"> Metric Name </th>
@@ -339,7 +337,7 @@ Consider this value in combination with the value of Current to understand the c
 </tbody>
 </table>
 
-#####Metric Category: Operations
+##### Metric Category: Operations
  <table><tbody>
  <tr>
  <th align="left"> Metric Name </th>
@@ -372,7 +370,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-###Replica Stats
+### Replica Stats
 For each replica the following metrics are reported.
 <table><tbody>
 <tr>
@@ -394,8 +392,8 @@ For each replica the following metrics are reported.
 </tbody>
 </table>
 
-###DB Stats
-#####<DB Name>
+### DB Stats
+##### <DB Name>
 
 <table><tbody>
  <tr>
@@ -446,8 +444,8 @@ For each replica the following metrics are reported.
  </tbody>
  </table>
 
-#####Metric Category: Collection Stats
-#####<collection name>
+##### Metric Category: Collection Stats
+##### <collection name>
 
 <table><tbody>
  <tr>
