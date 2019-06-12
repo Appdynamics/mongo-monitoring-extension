@@ -113,7 +113,7 @@ public class CollectionStatsTest {
 
                         JsonParser parser = new JsonParser();
                         Object obj = parser.parse(new FileReader(
-                                "src/test/resources/conf/collectionStats.txt"));
+                                "src/test/resources/conf/collectionStats.json"));
 
 
 

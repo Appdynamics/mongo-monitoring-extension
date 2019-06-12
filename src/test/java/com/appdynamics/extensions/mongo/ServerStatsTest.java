@@ -90,7 +90,7 @@ public class ServerStatsTest {
 
                         JsonParser parser = new JsonParser();
                         Object obj = parser.parse(new FileReader(
-                                "src/test/resources/conf/serverStat.txt"));
+                                "src/test/resources/conf/serverStat.json"));
 
 
                         BSONObject bson = (BSONObject)com.mongodb.util.JSON.parse(obj.toString());

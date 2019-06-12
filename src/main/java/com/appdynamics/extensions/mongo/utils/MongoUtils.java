@@ -25,6 +25,7 @@ public class MongoUtils {
         BasicDBObject basicDBObject = null;
         try {
             basicDBObject = BasicDBObject.parse(db.runCommand(command).toJson());
+            logger.debug("Output of command " +  command + " for db " + db + " is: " + basicDBObject.toJson());
 
         } catch (Exception e) {
             logger.error("Error while executing " + command + " for db " + db, e);
