@@ -475,7 +475,7 @@ For each replica the following metrics are reported.
  </tbody>
  </table>
 
-
+```
 
 ### Credentials Encryption
 
