@@ -12,8 +12,8 @@ import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.mongo.input.MetricConfig;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.mongodb.BasicDBObject;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;

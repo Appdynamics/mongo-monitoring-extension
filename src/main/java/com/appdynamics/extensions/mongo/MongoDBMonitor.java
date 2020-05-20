@@ -10,6 +10,7 @@ package com.appdynamics.extensions.mongo;
 
 import com.appdynamics.extensions.ABaseMonitor;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.mongo.connection.SslUtils;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.utils.Constants;
@@ -17,7 +18,6 @@ import com.appdynamics.extensions.mongo.utils.MongoClientGenerator;
 import com.appdynamics.extensions.util.AssertUtils;
 import com.mongodb.MongoClient;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.List;
@@ -25,7 +25,8 @@ import java.util.Map;
 
 public class MongoDBMonitor extends ABaseMonitor {
 
-    private static final Logger logger = LoggerFactory.getLogger(MongoDBMonitor.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MongoDBMonitor.class);
+
 
     @Override
     protected String getDefaultMetricPrefix() {

@@ -11,27 +11,13 @@ In order to use this extension, you do need a [Standalone JAVA Machine Agent](ht
 The extension needs to be able to connect to the Mongo DB in order to collect and send metrics. To do this, you will have to either establish a remote connection in between the extension and the product, or have an agent on the same machine running the product in order for the extension to collect and send the metrics.
 
 
-Metrics include:
-
-* Server up time
-* Global lock time
-* Operations currently queued, number waiting for the read-lock or write-lock
-* Total active connections, number of read and write operations
-* Memory metrics including bits, resident RAM, virtual memory, mapped memory, mapped memory with journaling
-* Current and available connections
-* Index counters including index access, hits and misses, resets
-* Background flushing metrics such as number of times, total time, average time, last time. These metrics only appear for instances that use the MMAPv1 storage engine.
-* Network traffic sent and received (in bytes), number of distinct requests received
-* Number of database operations including: insert, query, update, delete, get more, and total number of commands
-* Number of asserts since the server process started: regular, warnings, message, user, and number of times the rollover counter has rolled
-* Database related stats
-* Cluster related stats (status, health and uptime)
-
 ##Installation
 1. Download and unzip the  the file MongoMonitor-[version].zip into `<MACHINE_AGENT_HOME>/monitors/` directory.
 2. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified in the below section.
 3. All metrics to be reported are configured in metrics.xml. Users can remove entries from metrics.xml to stop the metric from reporting, or add new entries as well.
 4. Restart the machine agent.
+
+Please place the extension in the **"monitors"** directory of your **Machine Agent** installation directory. Do not place the extension in the **"extensions"** directory of your **Machine Agent** installation directory.
 
 ## Configuration ##
 
@@ -102,7 +88,7 @@ adding new metrics. You do have the ability to also chose your Rollup types as w
 that you would like displayed on the metric browser.
 
 
- ```
+
 For configuring the metrics, the following properties can be used:
 
      |     Property      |   Default value |         Possible values         |                                              Description                                                                                                |
@@ -125,13 +111,6 @@ For configuring the metrics, the following properties can be used:
               delta: false
      ```
      **All these metric properties are optional, and the default value shown in the table is applied to the metric(if a property has not been specified) by default.**
-
-## Credentials Encryption
-
-Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-Password-Encryption-with-Extensions/ta-p/29397) to get detailed instructions on password encryption. The steps in this document will guide you through the whole process.
-
-## Extensions Workbench
-Workbench is an inbuilt feature provided with each extension in order to assist you to fine tune the extension setup before you actually deploy it on the controller. Please review the following document on [How to use the Extensions WorkBench](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-the-Extensions-WorkBench/ta-p/30130)
 
 
 ##Metrics
@@ -500,11 +479,17 @@ For each replica the following metrics are reported.
 
 
 
-## Troubleshooting
-1. Please ensure Mongo DB is reachable from the machine where extension is running. Run a telnet/ping from the machine where extension is running to the MongoDB port and see whether it connects successfully or not.
-2. Please follow the steps listed in this [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) in order to troubleshoot your issue. These are a set of common issues that customers might have faced during the installation of the extension. If these don't solve your issue, please follow the last step on the [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) to contact the support team.
+### Credentials Encryption
 
-## Support Tickets
+Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-Password-Encryption-with-Extensions/ta-p/29397) to get detailed instructions on password encryption. The steps in this document will guide you through the whole process.
+
+### Extensions Workbench
+Workbench is an inbuilt feature provided with each extension in order to assist you to fine tune the extension setup before you actually deploy it on the controller. Please review the following document on [How to use the Extensions WorkBench](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-the-Extensions-WorkBench/ta-p/30130)
+
+### Troubleshooting
+Please follow the steps listed in this [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) in order to troubleshoot your issue. These are a set of common issues that customers might have faced during the installation of the extension. If these don't solve your issue, please follow the last step on the [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) to contact the support team.
+
+### Support Tickets
 If after going through the [Troubleshooting Document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) you have not been able to get your extension working, please file a ticket and add the following information.
 
 Please provide the following in order for us to assist you better.
@@ -530,5 +515,5 @@ Always feel free to fork and contribute any changes directly here on [GitHub](ht
 |--------------------------|------------|
 |Extension Version         |2.0.0       |
 |Controller Compatibility  |4.5 or Later|
-|Product Tested On         |4.0.3       |
-|Last Update               |06/12/2019  |
+|Product Tested On         |4.5.13+     |
+|Last Update               |05/20/2020  |

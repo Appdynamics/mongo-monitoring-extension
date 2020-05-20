@@ -11,6 +11,7 @@ package com.appdynamics.extensions.mongo;
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.stats.CollectionStats;
 import com.appdynamics.extensions.mongo.stats.DBStats;
@@ -21,7 +22,6 @@ import com.appdynamics.extensions.util.StringUtils;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.Phaser;
@@ -30,7 +30,7 @@ import java.util.concurrent.Phaser;
  * Created by bhuvnesh.kumar on 3/12/19.
  */
 public class MongoDBMonitorTask implements AMonitorTaskRunnable {
-    private static final Logger logger = LoggerFactory.getLogger(MongoDBMonitorTask.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MongoDBMonitorTask.class);
     private Map config;
     private String metricPrefix;
     private MongoClient mongoClient;
