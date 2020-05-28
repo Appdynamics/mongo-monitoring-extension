@@ -9,6 +9,7 @@
 package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.utils.MetricUtils;
@@ -17,7 +18,6 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ import static com.appdynamics.extensions.mongo.utils.MongoUtils.executeMongoComm
  */
 public class DBStats implements Runnable{
 
-    private static final Logger logger = LoggerFactory.getLogger(DBStats.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(DBStats.class);
 
     private Stat stat;
 

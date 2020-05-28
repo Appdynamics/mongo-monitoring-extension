@@ -9,6 +9,7 @@
 package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.utils.MetricUtils;
@@ -23,7 +24,6 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.types.BSONTimestamp;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,7 +37,7 @@ import java.util.concurrent.Phaser;
  */
 public class ReplicaStats implements Runnable{
 
-    private static final Logger logger = LoggerFactory.getLogger(ReplicaStats.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(ReplicaStats.class);
 
     private Stat stat;
 

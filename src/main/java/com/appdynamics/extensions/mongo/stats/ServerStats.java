@@ -9,6 +9,7 @@
 package com.appdynamics.extensions.mongo.stats;
 
 import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.appdynamics.extensions.mongo.utils.Constants;
@@ -18,7 +19,6 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +29,7 @@ import java.util.concurrent.Phaser;
  */
 public class ServerStats implements Runnable{
 
-    private static final Logger logger = LoggerFactory.getLogger(ServerStats.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(ServerStats.class);
 
     private Stat stat;
 

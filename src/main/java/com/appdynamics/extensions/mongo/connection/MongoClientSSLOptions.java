@@ -8,11 +8,11 @@
 
 package com.appdynamics.extensions.mongo.connection;
 
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.mongo.exception.MongoMonitorException;
 import com.appdynamics.extensions.mongo.utils.Constants;
 import com.mongodb.MongoClientOptions;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -20,7 +20,7 @@ import java.util.Map;
  * Created by bhuvnesh.kumar on 3/19/19.
  */
 public class MongoClientSSLOptions {
-    private static final Logger logger = LoggerFactory.getLogger(MongoClientSSLOptions.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MongoClientSSLOptions.class);
 
     public static MongoClientOptions getMongoClientSSLOptions(Map config) throws MongoMonitorException {
         Boolean ssl = false;

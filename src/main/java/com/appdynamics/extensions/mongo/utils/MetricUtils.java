@@ -8,13 +8,13 @@
 
 package com.appdynamics.extensions.mongo.utils;
 
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.mongo.input.MetricConfig;
 import com.appdynamics.extensions.mongo.input.Stat;
 import com.mongodb.BasicDBObject;
 import org.slf4j.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import java.util.Set;
  */
 public class MetricUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(MetricUtils.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MetricUtils.class);
 
     private static ObjectMapper objectMapper = new ObjectMapper();
 

@@ -8,17 +8,17 @@
 
 package com.appdynamics.extensions.mongo.utils;
 
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created by bhuvnesh.kumar on 3/12/19.
  */
 public class MongoUtils {
-    private static final Logger logger = LoggerFactory.getLogger(MongoUtils.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MongoUtils.class);
 
     public static BasicDBObject executeMongoCommand(MongoDatabase db, Document command) {
 

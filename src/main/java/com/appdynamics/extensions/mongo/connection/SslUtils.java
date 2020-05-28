@@ -9,6 +9,7 @@
 package com.appdynamics.extensions.mongo.connection;
 
 import com.appdynamics.extensions.crypto.Decryptor;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.mongo.utils.Constants;
 import com.appdynamics.extensions.util.PathResolver;
 import com.appdynamics.extensions.util.StringUtils;
@@ -16,13 +17,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Map;
 
 public class SslUtils {
-    private static final Logger logger = LoggerFactory.getLogger(SslUtils.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(SslUtils.class);
 
     /**
      * sets SSL params only if [connection] is present in config.yml

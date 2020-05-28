@@ -8,6 +8,7 @@
 
 package com.appdynamics.extensions.mongo.utils;
 
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.mongo.connection.MongoClientSSLOptions;
 import com.appdynamics.extensions.mongo.exception.MongoMonitorException;
 import com.google.common.base.Strings;
@@ -17,7 +18,6 @@ import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +29,7 @@ import static com.appdynamics.extensions.util.CryptoUtils.getPassword;
  * Created by bhuvnesh.kumar on 3/21/19.
  */
 public class MongoClientGenerator {
-    private static final Logger logger = LoggerFactory.getLogger(MongoClientGenerator.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MongoClientGenerator.class);
 
     public static MongoClient getMongoClient(List servers, Map config) {
         MongoClient mongoClient = null;
