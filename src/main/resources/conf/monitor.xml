@@ -1,8 +1,9 @@
 <!--
-  ~ Copyright 2018. AppDynamics LLC and its affiliates.
-  ~ All Rights Reserved.
-  ~ This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
-  ~ The copyright notice above does not evidence any actual or intended publication of such source code.
+  ~   Copyright 2019 . AppDynamics LLC and its affiliates.
+  ~   All Rights Reserved.
+  ~   This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+  ~   The copyright notice above does not evidence any actual or intended publication of such source code.
+  ~
   -->
 
 <monitor>
@@ -21,10 +22,11 @@
         <execution-timeout-in-secs>60</execution-timeout-in-secs>
         <task-arguments>
             <argument name="config-file" is-required="true" default-value="monitors/MongoMonitor/config.yml"/>
+            <argument name="metric-file" is-required="true" default-value="monitors/MongoMonitor/metrics.xml"/>
         </task-arguments>
         <java-task>
             <classpath>mongo-monitoring-extension.jar</classpath>
-            <impl-class>com.appdynamics.monitors.mongo.MongoDBMonitor</impl-class>
+            <impl-class>com.appdynamics.extensions.mongo.MongoDBMonitor</impl-class>
         </java-task>
     </monitor-run-task>
 </monitor>

@@ -1,25 +1,62 @@
+#prefix used to show up metrics in AppDynamics
+metricPrefix:  "Custom Metrics|Mongo DB|"
+#This will create it in specific Tier. Replace <TIER_ID>
+#metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo DB|"
+
 # MongoDB host and port. If ReplicaSet is enabled, configure all or subset of members of the cluster.
 servers:
-  - host: "localhost"
+  - name: "Server 1"
+    host: "localhost"
     port: 27017
 
-# Specify this key if Password Encryption Support is required. If not keep it empty
-# If specified, adminDBPassword and databases passwords are now the encrypted passwords.
-passwordEncryptionKey: ""
+  - name: "Replica"
+    host: "localhost"
+    port: 27018
 
 # Admin DB username and password. Required if mongod is started with --auth (Authentication) else keep empty
 # The user should have clusterMonitor role as a minimum
-adminDBUsername: "admin"
-adminDBPassword: "admin"
+username: ""
+password: ""
 
-# Change ssl to true if mongod is started with ssl. Then specify the pemFilePath, if not keep empty.
-ssl: false
-pemFilePath: ""
+# You can either use the normal password or encrypt your password and provide the encrypted Password and encryptionKey.
+# Specify this key if Password Encryption Support is required. If not keep it empty
+# Do not provide both, only provide one and comment out the other.
 
-# https://docs.mongodb.com/manual/reference/command/serverStatus/
-serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, metrics]
+encryptedPassword: ""
+encryptionKey: ""
 
-#prefix used to show up metrics in AppDynamics
-metricPathPrefix:  "Custom Metrics|Mongo Server|"
-#This will create it in specific Tier. Replace <TIER_ID>
-#metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo Server|"
+
+# Change ssl to true if mongod is started with ssl.
+useSsl: false
+
+# For each server you monitor, you will need a total of 1(by default) + 1(for serverMetrics) + 1(for replicaMetrics) + 1(for DB) + 1(for collection)
+numberOfThreads: 5
+
+
+# If you are using the connection section,
+# any change to the connection section below requires a machine agent restart for the changes to reflect
+connection:
+  socketTimeout: 3000
+  connectTimeout: 1000
+  sslTrustStorePath: '' #if [sslTrustStorePath]: '' empty, it defaults to <MachineAgent_Home>/conf/cacerts.jks
+  sslTrustStorePassword: '' # [sslTrustStorePassword: ""] defaults to ''
+  sslTrustStoreEncryptedPassword: '' #provide encrypted Password if encryption is needed
+
+# If the system properties are not set for the field, then the data is retrieved from machine agent configFile. Please refer to ControllerInfoFactory for more details.
+# Values provided here can be overridden if the same field is configured in either controller-info.xml or system properties.
+controllerInfo:
+  controllerHost: ""  # -Dappdynamics.controller.hostName
+  controllerPort:  # -Dappdynamics.controller.port
+  controllerSslEnabled: false # -Dappdynamics.controller.ssl.enabled
+  enableOrchestration: false # N/A
+  uniqueHostId: "" # -Dappdynamics.agent.uniqueHostId
+  username: "admin" # -Dappdynamics.agent.monitors.controller.username
+  password: "" # -Dappdynamics.agent.monitors.controller.password
+  encryptedPassword: "j+0oxTzUtw2xAdaq4UUq/Q==" # -Dappdynamics.agent.monitors.controller.encryptedPassword
+  accountAccessKey: "" # -Dappdynamics.agent.accountAccessKey
+  account: "" # -Dappdynamics.agent.accountName
+  machinePath: "" # -Dappdynamics.machine.agent.hierarchyPath
+  simEnabled: false # -Dappdynamics.sim.enabled
+  applicationName: "" # -Dappdynamics.agent.applicationName
+  tierName: "" # -Dappdynamics.agent.tierName
+  nodeName: "" # -Dappdynamics.agent.nodeName

@@ -1,33 +1,23 @@
 # AppDynamics MongoDB Monitoring Extension
 
-##Use Case
+## Use Case
 The MongoDB custom monitor captures statistics from the MongoDB server and displays them in the AppDynamics Metric Browser.
 This extension works only with the standalone machine agent.
 
+## Prerequisite
 
-Metrics include:
+In order to use this extension, you do need a [Standalone JAVA Machine Agent](https://docs.appdynamics.com/display/PRO44/Java+Agent) or [SIM Agent](https://docs.appdynamics.com/display/PRO44/Server+Visibility).  For more details on downloading these products, please  visit [here](https://download.appdynamics.com/).
 
-* Server up time
-* Global lock time
-* Operations currently queued, number waiting for the read-lock or write-lock
-* Total active connections, number of read and write operations
-* Memory metrics including bits, resident RAM, virtual memory, mapped memory, mapped memory with journaling
-* Current and available connections
-* Index counters including index access, hits and misses, resets
-* Background flushing metrics such as number of times, total time, average time, last time
-* Network traffic sent and received (in bytes), number of distinct requests received
-* Number of database operations including: insert, query, update, delete, get more, and total number of commands
-* Number of asserts since the server process started: regular, warnings, message, user, and number of times the rollover counter has rolled
-* Database related stats
-* Cluster related stats (status, health and uptime)
+The extension needs to be able to connect to the Mongo DB in order to collect and send metrics. To do this, you will have to either establish a remote connection in between the extension and the product, or have an agent on the same machine running the product in order for the extension to collect and send the metrics.
+
 
 ##Installation
-1. To build from source, clone this repository and run 'mvn clean install'. This will produce a MongoMonitor-VERSION.zip in the target directory. Alternatively, download the latest release archive from [Github](https://github.com/Appdynamics/mongo-monitoring-extension/releases).
-2. Unzip the file MongoMonitor-[version].zip into `<MACHINE_AGENT_HOME>/monitors/`.
-3. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified in the below section.
-4. Restart the machineagent
-5. In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Mongo Server.
+1. Download and unzip the  the file MongoMonitor-[version].zip into `<MACHINE_AGENT_HOME>/monitors/` directory.
+2. In the newly created directory "MongoMonitor", edit the config.yml configuring the parameters specified in the below section.
+3. All metrics to be reported are configured in metrics.xml. Users can remove entries from metrics.xml to stop the metric from reporting, or add new entries as well.
+4. Restart the machine agent.
 
+Please place the extension in the **"monitors"** directory of your **Machine Agent** installation directory. Do not place the extension in the **"extensions"** directory of your **Machine Agent** installation directory.
 
 ## Configuration ##
 
@@ -61,9 +51,9 @@ Note : Please make sure to not use tab (\t) while editing yaml files. You may wa
         serverStatusExcludeMetricFields: [locks, wiredTiger, tcmalloc, opcountersRepl, metrics]
         
         #prefix used to show up metrics in AppDynamics
-        metricPathPrefix:  "Custom Metrics|Mongo Server|"
+        metricPathPrefix:  "Custom Metrics|Mongo DB|"
         #This will create it in specific Tier. Replace <TIER_ID>
-        #metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo Server|"
+        #metricPrefix:  "Server|Component:<TIER_ID>|Custom Metrics|Mongo DB|"
         
    ```
    
@@ -83,18 +73,47 @@ For eg.
     java -Dappdynamics.agent.maxMetrics=2500 -jar machineagent.jar
 ```
 
-##Password Encryption Support
-To avoid setting the clear text password in the config.yml, please follow the process below to encrypt the password
+3. Configure the "COMPONENT_ID" under which the metrics need to be reported. This can be done by changing the value of `<COMPONENT_ID>` in
+          metricPrefix: "Server|Component:<COMPONENT_ID>|Custom Metrics|Mongo DB|".
 
-1. Download the util jar to encrypt the password from [https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar](https://github.com/Appdynamics/maven-repo/blob/master/releases/com/appdynamics/appd-exts-commons/1.1.2/appd-exts-commons-1.1.2.jar) and navigate to the downloaded directory
-2. Encrypt password from the commandline
-`java -cp appd-exts-commons-1.1.2.jar com.appdynamics.extensions.crypto.Encryptor myKey myPassword`
-3. Specify the passwordEncryptionKey and encrypted adminDBPassword in config.yml
+          For example,
+          metricPrefix: "Server|Component:100|Custom Metrics|Mongo DB|"
+          
+#### Metrics.xml
+
+You can add/remove metrics of your choosing by modifying the provided metrics.xml file. This file consists of all the metrics that
+will be monitored and sent to the controller. Please look at how the metrics have been defined and follow the same convention when
+adding new metrics. You do have the ability to also chose your Rollup types as well as for each metric as well as set an alias name
+that you would like displayed on the metric browser.
 
 
-##Metrics
 
-###Server Stats
+For configuring the metrics, the following properties can be used:
+
+     |     Property      |   Default value |         Possible values         |                                              Description                                                                                                |
+     | :---------------- | :-------------- | :------------------------------ | :------------------------------------------------------------------------------------------------------------- |
+     | alias             | metric name     | Any string                      | The substitute name to be used in the metric browser instead of metric name.                                   |
+     | aggregationType   | "AVERAGE"       | "AVERAGE", "SUM", "OBSERVATION" | [Aggregation qualifier](https://docs.appdynamics.com/display/PRO44/Build+a+Monitoring+Extension+Using+Java)    |
+     | timeRollUpType    | "AVERAGE"       | "AVERAGE", "SUM", "CURRENT"     | [Time roll-up qualifier](https://docs.appdynamics.com/display/PRO44/Build+a+Monitoring+Extension+Using+Java)   |
+     | clusterRollUpType | "INDIVIDUAL"    | "INDIVIDUAL", "COLLECTIVE"      | [Cluster roll-up qualifier](https://docs.appdynamics.com/display/PRO44/Build+a+Monitoring+Extension+Using+Java)|
+     | multiplier        | 1               | Any number                      | Value with which the metric needs to be multiplied.                                                            |
+     | convert           | null            | Any key value map               | Set of key value pairs that indicates the value to which the metrics need to be transformed. eg: UP:0, DOWN:1  |
+     | delta             | false           | true, false                     | If enabled, gives the delta values of metrics instead of actual values.                                        |
+
+     For example,
+     - name: "uptime"
+              alias: "Uptime"
+              aggregationType: "OBSERVATION"
+              timeRollUpType: "CURRENT"
+              clusterRollUpType: "COLLECTIVE"
+              delta: false
+     **All these metric properties are optional, and the default value shown in the table is applied to the metric(if a property has not been specified) by default.**
+```
+
+
+## Metrics
+
+### Server Stats
 
 <table><tbody>
 <tr>
@@ -108,7 +127,7 @@ To avoid setting the clear text password in the config.yml, please follow the pr
 </tbody>
 </table>
 
-#####Metric Category: Asserts
+##### Metric Category: Asserts
 
 <table><tbody>
 <tr>
@@ -138,7 +157,7 @@ To avoid setting the clear text password in the config.yml, please follow the pr
 </tbody>
 </table>
 
-#####Metric Category: Background Flushing 
+##### Metric Category: Background Flushing 
 
 <table><tbody>
 <tr>
@@ -164,7 +183,7 @@ To avoid setting the clear text password in the config.yml, please follow the pr
 </tbody>
 </table>
 
-#####Metric Category: Connections
+##### Metric Category: Connections
 
 <table><tbody>
 <tr>
@@ -186,7 +205,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-#####Metric Category: Global Lock
+##### Metric Category: Global Lock
  
  <table>
  <tbody>
@@ -222,7 +241,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-######Current Queue
+###### Current Queue
 
 <table><tbody>
 <tr>
@@ -244,34 +263,8 @@ Consider this value in combination with the value of Current to understand the c
 </tbody>
 </table>
 
-#####Metric Category: Index Counter
- 
- <table>
- <tbody>
- <tr>
- <th align="left"> Metric Name </th>
- <th align="left"> Description </th>
- </tr>
- <tr>
-  <td align="left"> Accesses </td>
-  <td align="left"> </td>
-  </tr>
- <tr>
-  <td align="left"> Hits </td>
-  <td align="left"> </td>
-  </tr>
- <tr>
-  <td align="left"> Misses </td>
-  <td align="left"> </td>
-  </tr>
-<tr>
-  <td align="left"> Resets </td>
-  <td align="left"> </td>
-  </tr>
- </tbody>
- </table>
 
-#####Metric Category: Memory
+##### Metric Category: Memory
 
 <table><tbody>
 <tr>
@@ -302,7 +295,7 @@ Consider this value in combination with the value of Current to understand the c
 </table>
 
 
-#####Metric Category: Network
+##### Metric Category: Network
 <table><tbody>
 <tr>
 <th align="left"> Metric Name </th>
@@ -323,7 +316,7 @@ Consider this value in combination with the value of Current to understand the c
 </tbody>
 </table>
 
-#####Metric Category: Operations
+##### Metric Category: Operations
  <table><tbody>
  <tr>
  <th align="left"> Metric Name </th>
@@ -356,7 +349,7 @@ Consider this value in combination with the value of Current to understand the c
  </tbody>
  </table>
 
-###Replica Stats
+### Replica Stats
 For each replica the following metrics are reported.
 <table><tbody>
 <tr>
@@ -378,8 +371,8 @@ For each replica the following metrics are reported.
 </tbody>
 </table>
 
-###DB Stats
-#####<DB Name>
+### DB Stats
+##### <DB Name>
 
 <table><tbody>
  <tr>
@@ -430,8 +423,8 @@ For each replica the following metrics are reported.
  </tbody>
  </table>
 
-#####Metric Category: Collection Stats
-#####<collection name>
+##### Metric Category: Collection Stats
+##### <collection name>
 
 <table><tbody>
  <tr>
@@ -482,16 +475,43 @@ For each replica the following metrics are reported.
  </tbody>
  </table>
 
+```
+
+### Credentials Encryption
+
+Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-Password-Encryption-with-Extensions/ta-p/29397) to get detailed instructions on password encryption. The steps in this document will guide you through the whole process.
+
+### Extensions Workbench
+Workbench is an inbuilt feature provided with each extension in order to assist you to fine tune the extension setup before you actually deploy it on the controller. Please review the following document on [How to use the Extensions WorkBench](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-the-Extensions-WorkBench/ta-p/30130)
+
+### Troubleshooting
+Please follow the steps listed in this [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) in order to troubleshoot your issue. These are a set of common issues that customers might have faced during the installation of the extension. If these don't solve your issue, please follow the last step on the [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) to contact the support team.
+
+### Support Tickets
+If after going through the [Troubleshooting Document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) you have not been able to get your extension working, please file a ticket and add the following information.
+
+Please provide the following in order for us to assist you better.
+
+    1. Stop the running machine agent.
+    2. Delete all existing logs under <MachineAgent>/logs.
+    3. Please enable debug logging by editing the file <MachineAgent>/conf/logging/log4j.xml. Change the level value of the following <logger> elements to debug.
+        <logger name="com.singularity">
+        <logger name="com.appdynamics">
+    4. Start the machine agent and please let it run for 10 mins. Then zip and upload all the logs in the directory <MachineAgent>/logs/*.
+    5. Attach the zipped <MachineAgent>/conf/* directory here.
+    6. Attach the zipped <MachineAgent>/monitors/ExtensionFolderYouAreHavingIssuesWith directory here.
+
+For any support related questions, you can also contact help@appdynamics.com.
 
 
-##Contributing
+## Contributing
 
-Always feel free to fork and contribute any changes directly here on GitHub.
+Always feel free to fork and contribute any changes directly here on [GitHub](https://github.com/Appdynamics/mongo-monitoring-extension).
 
-##Community
-
-Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/Extensions/MongoDB-Monitoring-Extension/idi-p/831) community.
-
-##Support
-
-For any questions or feature request, please contact [AppDynamics Support](mailto:help@appdynamics.com).
+## Version
+|          Name            |  Version   |
+|--------------------------|------------|
+|Extension Version         |2.0.0       |
+|Controller Compatibility  |4.5 or Later|
+|Product Tested On         |4.5.13+     |
+|Last Update               |05/20/2020  |
